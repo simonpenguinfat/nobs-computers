@@ -2,9 +2,11 @@ import Link from "next/link";
 import Image from "next/image";
 import NavbarAuth from "@/components/NavbarAuth";
 import BuildGallery from "@/components/BuildGallery";
+import { getShowcaseBuilds } from "@/lib/showcase-builds";
 import site from "../../content/site.json";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const builds = await getShowcaseBuilds();
   return (
     <>
       <NavbarAuth />
@@ -51,7 +53,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <BuildGallery />
+      <BuildGallery builds={builds} />
 
       <section className="py-12 sm:py-16 px-4 sm:px-6 border-t border-border bg-surface-light">
         <div className="max-w-2xl mx-auto text-center">

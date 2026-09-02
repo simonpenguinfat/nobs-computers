@@ -1,10 +1,11 @@
 import BuildCard from "./BuildCard";
-import builds from "../../content/builds.json";
 import type { BuildShowcase } from "@/lib/types";
 
-export default function BuildGallery() {
-  const showcase = builds as BuildShowcase[];
+interface BuildGalleryProps {
+  builds: BuildShowcase[];
+}
 
+export default function BuildGallery({ builds }: BuildGalleryProps) {
   return (
     <section className="py-12 sm:py-20 px-4 sm:px-6 bg-white">
       <div className="max-w-6xl mx-auto">
@@ -17,7 +18,7 @@ export default function BuildGallery() {
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-          {showcase.map((build) => (
+          {builds.map((build) => (
             <BuildCard key={build.id} build={build} />
           ))}
         </div>

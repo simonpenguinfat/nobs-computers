@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import LogoutButton from "@/components/LogoutButton";
-import BuilderDashboard from "@/components/BuilderDashboard";
+import AdminTabs from "@/components/AdminTabs";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/auth";
 import type { BuildRequest, Profile } from "@/lib/types";
@@ -58,7 +58,7 @@ export default async function AdminPage() {
             Manage clients, builds, and conversations
           </p>
         </div>
-        <BuilderDashboard
+        <AdminTabs
           clients={(clients ?? []) as (BuildRequest & { profiles: Profile })[]}
           builderId={user.id}
           builderName={profile?.full_name ?? "Admin"}

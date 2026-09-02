@@ -40,6 +40,31 @@ export interface BuildShowcase {
   useCase: string;
 }
 
+export interface ShowcaseBuildRow {
+  id: string;
+  title: string;
+  description: string;
+  image_url: string;
+  specs: string[];
+  budget: string;
+  use_case: string;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export function toBuildShowcase(row: ShowcaseBuildRow): BuildShowcase {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    image: row.image_url,
+    specs: row.specs ?? [],
+    budget: row.budget,
+    useCase: row.use_case,
+  };
+}
+
 export const BUILD_STATUSES = {
   pending: { label: "Awaiting Review", color: "text-amber-700 bg-amber-50" },
   in_progress: { label: "In Progress", color: "text-neutral-700 bg-neutral-100" },
