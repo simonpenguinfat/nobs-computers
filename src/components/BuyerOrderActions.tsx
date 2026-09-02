@@ -28,17 +28,27 @@ export default function BuyerOrderActions({
     setLoading(true);
     setError("");
 
-    const { error: updateError } = await supabase
+    const { data, error: updateError } = await supabase
       .from("build_requests")
       .update({
         status: "cancelled",
         updated_at: new Date().toISOString(),
       })
       .eq("id", request.id)
-      .in("status", ["pending", "in_progress"]);
+      .in("status", ["pending", "in_progress"])
+      .select("*")
+      .maybeSingle();
 
     if (updateError) {
       setError(updateError.message);
+      setLoading(false);
+      return;
+    }
+
+    if (!data || data.status !== "cancelled") {
+      setError(
+        "Could not cancel your order. Run fix-decline-order.sql in Supabase, then try again."
+      );
       setLoading(false);
       return;
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { BUILD_STATUSES, isArchivedStatus } from "@/lib/types";
 import type { BuildRequest, Profile } from "@/lib/types";
@@ -152,6 +152,43 @@ export default function BuilderDashboard({
   const pendingCount = clients.filter((c) => c.status === "pending").length;
   const activeCount = clients.filter((c) => c.status === "in_progress").length;
   const issueCount = clients.filter((c) => c.status === "not_received").length;
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-build-requests")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "build_requests",
+        },
+        (payload) => {
+          const updated = payload.new as BuildRequest;
+
+          if (isArchivedStatus(updated.status)) {
+            setClients((prev) => prev.filter((c) => c.id !== updated.id));
+            setSelectedId((current) =>
+              current === updated.id ? null : current
+            );
+            return;
+          }
+
+          setClients((prev) => {
+            const exists = prev.some((c) => c.id === updated.id);
+            if (!exists) return prev;
+            return prev.map((c) =>
+              c.id === updated.id ? { ...c, ...updated } : c
+            );
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase]);
 
   return (
     <div className="space-y-6">
