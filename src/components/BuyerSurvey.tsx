@@ -1,0 +1,156 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { USE_CASES } from "@/lib/types";
+import type { BuildRequest } from "@/lib/types";
+
+interface BuyerSurveyProps {
+  userId: string;
+  existingRequest: BuildRequest | null;
+  onSubmitted: (request: BuildRequest) => void;
+}
+
+export default function BuyerSurvey({
+  userId,
+  existingRequest,
+  onSubmitted,
+}: BuyerSurveyProps) {
+  const [useCase, setUseCase] = useState(existingRequest?.use_case ?? "");
+  const [budget, setBudget] = useState(existingRequest?.budget?.toString() ?? "");
+  const [existingParts, setExistingParts] = useState(
+    existingRequest?.existing_parts ?? ""
+  );
+  const [preferences, setPreferences] = useState(
+    existingRequest?.preferences ?? ""
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+  const supabase = useMemo(() => createClient(), []);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setSaved(false);
+
+    const payload = {
+      use_case: useCase,
+      budget: parseFloat(budget) || 0,
+      existing_parts: existingParts,
+      preferences,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (existingRequest) {
+      const { data, error: updateError } = await supabase
+        .from("build_requests")
+        .update(payload)
+        .eq("id", existingRequest.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        setError(updateError.message);
+      } else if (data) {
+        setSaved(true);
+        onSubmitted(data);
+      }
+    } else {
+      const { data, error: insertError } = await supabase
+        .from("build_requests")
+        .insert({ ...payload, buyer_id: userId, status: "pending" })
+        .select()
+        .single();
+
+      if (insertError) {
+        setError(insertError.message);
+      } else if (data) {
+        setSaved(true);
+        onSubmitted(data);
+      }
+    }
+
+    setLoading(false);
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div>
+        <label className="block text-sm font-medium mb-1.5 text-neutral-700">
+          What will you use this PC for?
+        </label>
+        <select
+          value={useCase}
+          onChange={(e) => setUseCase(e.target.value)}
+          required
+          className="w-full bg-white border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-neutral-400"
+        >
+          <option value="">Select a use case...</option>
+          {USE_CASES.map((uc) => (
+            <option key={uc} value={uc}>
+              {uc}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1.5 text-neutral-700">
+          Budget (CAD)
+        </label>
+        <input
+          type="number"
+          value={budget}
+          onChange={(e) => setBudget(e.target.value)}
+          placeholder="e.g. 1500"
+          required
+          min="0"
+          className="w-full bg-white border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-neutral-400"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1.5 text-neutral-700">
+          Parts you already own (if any)
+        </label>
+        <textarea
+          value={existingParts}
+          onChange={(e) => setExistingParts(e.target.value)}
+          placeholder="e.g. I have a monitor and an old SSD I want to reuse..."
+          rows={3}
+          className="w-full bg-surface-light border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 resize-none"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1.5 text-neutral-700">
+          Preferences & notes
+        </label>
+        <textarea
+          value={preferences}
+          onChange={(e) => setPreferences(e.target.value)}
+          placeholder="e.g. Quiet fans, RGB lighting, compact case, specific games..."
+          rows={3}
+          className="w-full bg-surface-light border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 resize-none"
+        />
+      </div>
+
+      {error && (
+        <p className="text-red-600 text-sm">{error}</p>
+      )}
+      {saved && (
+        <p className="text-green-700 text-sm">Saved successfully!</p>
+      )}
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full py-2.5 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
+      >
+        {loading ? "Saving..." : existingRequest ? "Update My Request" : "Submit Request"}
+      </button>
+    </form>
+  );
+}

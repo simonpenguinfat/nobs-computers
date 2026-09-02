@@ -1,0 +1,38 @@
+[
+  {
+    "id": "1",
+    "title": "Mid-Range Gaming Rig",
+    "description": "1440p gaming powerhouse with excellent thermals and RGB accents.",
+    "image": "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=800&q=80",
+    "specs": ["RTX 4070", "Ryzen 7 7800X3D", "32GB DDR5", "1TB NVMe"],
+    "budget": "$1,450",
+    "useCase": "Gaming"
+  },
+  {
+    "id": "2",
+    "title": "Creator Workstation",
+    "description": "Built for video editing and 3D rendering with whisper-quiet cooling.",
+    "image": "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&q=80",
+    "specs": ["RTX 4080", "Intel i7-14700K", "64GB DDR5", "2TB NVMe"],
+    "budget": "$2,200",
+    "useCase": "Content Creation"
+  },
+  {
+    "id": "3",
+    "title": "Budget Office & Study PC",
+    "description": "Fast, reliable, and energy-efficient — perfect for school and everyday work.",
+    "image": "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&q=80",
+    "specs": ["Integrated Graphics", "Ryzen 5 5600G", "16GB DDR4", "512GB SSD"],
+    "budget": "$550",
+    "useCase": "Office / School"
+  },
+  {
+    "id": "4",
+    "title": "Compact ITX Build",
+    "description": "Small form factor with full-size performance — fits anywhere.",
+    "image": "https://images.unsplash.com/photo-1593305841991-05c297ba4575?w=800&q=80",
+    "specs": ["RTX 4060 Ti", "Ryzen 5 7600", "32GB DDR5", "1TB NVMe"],
+    "budget": "$1,100",
+    "useCase": "Compact Gaming"
+  }
+]
