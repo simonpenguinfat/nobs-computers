@@ -10,9 +10,6 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "NO BS COMPUTERS — Custom Desktop Builds",
   description: "Honest custom PC builds matched to your needs and budget.",
-  icons: {
-    icon: "/logo.png",
-  },
 };
 
 export const viewport: Viewport = {
