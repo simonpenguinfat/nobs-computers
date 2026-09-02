@@ -182,6 +182,8 @@ create table if not exists public.messages (
 
   content text not null,
 
+  reply_to_id uuid references public.messages(id) on delete set null,
+
   created_at timestamptz not null default now()
 
 );

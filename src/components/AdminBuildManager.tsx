@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import { toBuildShowcase, USE_CASES } from "@/lib/types";
+import { toBuildShowcase, USE_CASES, formatBuiltDate } from "@/lib/types";
 import type { ShowcaseBuildRow } from "@/lib/types";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -17,7 +17,9 @@ export default function AdminBuildManager() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [budget, setBudget] = useState("");
+  const [details, setDetails] = useState("");
+  const [price, setPrice] = useState("");
+  const [builtDate, setBuiltDate] = useState("");
   const [useCase, setUseCase] = useState("");
   const [specsText, setSpecsText] = useState("");
   const [displayOrder, setDisplayOrder] = useState("0");
@@ -50,7 +52,9 @@ export default function AdminBuildManager() {
     setEditingId(null);
     setTitle("");
     setDescription("");
-    setBudget("");
+    setDetails("");
+    setPrice("");
+    setBuiltDate("");
     setUseCase("");
     setSpecsText("");
     setDisplayOrder("0");
@@ -65,7 +69,9 @@ export default function AdminBuildManager() {
     setEditingId(build.id);
     setTitle(build.title);
     setDescription(build.description);
-    setBudget(build.budget);
+    setDetails(build.details ?? "");
+    setPrice(build.price || build.budget || "");
+    setBuiltDate(build.built_date ?? "");
     setUseCase(build.use_case);
     setSpecsText(build.specs.join("\n"));
     setDisplayOrder(String(build.display_order));
@@ -133,7 +139,9 @@ export default function AdminBuildManager() {
       const payload = {
         title,
         description,
-        budget,
+        details: details || description,
+        price,
+        built_date: builtDate || null,
         use_case: useCase,
         specs,
         image_url: imageUrl,
@@ -223,14 +231,25 @@ export default function AdminBuildManager() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1.5 text-neutral-700">
-                Budget (display text)
+                Price (display text)
               </label>
               <input
                 type="text"
-                value={budget}
-                onChange={(e) => setBudget(e.target.value)}
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
                 placeholder="e.g. $1,450"
                 required
+                className="w-full bg-white border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-neutral-400"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1.5 text-neutral-700">
+                Date Built (optional)
+              </label>
+              <input
+                type="date"
+                value={builtDate}
+                onChange={(e) => setBuiltDate(e.target.value)}
                 className="w-full bg-white border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-neutral-400"
               />
             </div>
@@ -238,15 +257,32 @@ export default function AdminBuildManager() {
 
           <div>
             <label className="block text-sm font-medium mb-1.5 text-neutral-700">
-              Description
+              Short Summary
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
-              rows={3}
+              rows={2}
+              placeholder="Brief text shown on the gallery card..."
               className="w-full bg-white border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-neutral-400 resize-none"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1.5 text-neutral-700">
+              Full Details
+            </label>
+            <textarea
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+              rows={6}
+              placeholder="Longer description shown on the build detail page. Use blank lines between paragraphs."
+              className="w-full bg-white border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-neutral-400 resize-none"
+            />
+            <p className="text-xs text-neutral-500 mt-1">
+              If left empty, the short summary is used on the detail page.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -379,6 +415,12 @@ export default function AdminBuildManager() {
                   </div>
                   <div className="p-4">
                     <h3 className="font-medium text-neutral-900">{showcase.title}</h3>
+                    <p className="text-sm text-neutral-600 mt-0.5">{showcase.price}</p>
+                    {showcase.builtDate && (
+                      <p className="text-xs text-neutral-500 mt-0.5">
+                        Built {formatBuiltDate(showcase.builtDate)}
+                      </p>
+                    )}
                     <p className="text-sm text-neutral-500 mt-1 line-clamp-2">
                       {showcase.description}
                     </p>

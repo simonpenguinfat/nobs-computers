@@ -3,36 +3,44 @@
     "id": "1",
     "title": "Mid-Range Gaming Rig",
     "description": "1440p gaming powerhouse with excellent thermals and RGB accents.",
+    "details": "This build was designed for smooth 1440p gaming at high settings. We prioritized a cool-running CPU and a case with strong airflow, then added subtle RGB for a clean desk setup.\n\nThe customer wanted something that could handle modern AAA titles and double as a daily driver without sounding like a jet engine.",
     "image": "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=800&q=80",
     "specs": ["RTX 4070", "Ryzen 7 7800X3D", "32GB DDR5", "1TB NVMe"],
-    "budget": "$1,450",
-    "useCase": "Gaming"
+    "price": "$1,450",
+    "useCase": "Gaming",
+    "builtDate": "2024-06-01"
   },
   {
     "id": "2",
     "title": "Creator Workstation",
     "description": "Built for video editing and 3D rendering with whisper-quiet cooling.",
+    "details": "A workstation-focused build with extra RAM and fast storage for Premiere Pro and Blender. Noise was a top priority — we used a quiet air cooler and fan curve tuning so it stays near-silent under typical editing loads.",
     "image": "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&q=80",
     "specs": ["RTX 4080", "Intel i7-14700K", "64GB DDR5", "2TB NVMe"],
-    "budget": "$2,200",
-    "useCase": "Content Creation"
+    "price": "$2,200",
+    "useCase": "Content Creation",
+    "builtDate": "2024-09-15"
   },
   {
     "id": "3",
     "title": "Budget Office & Study PC",
     "description": "Fast, reliable, and energy-efficient — perfect for school and everyday work.",
+    "details": "An affordable system for homework, browsing, and light productivity. Integrated graphics kept costs down while still delivering a snappy Windows experience with an NVMe boot drive.",
     "image": "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&q=80",
     "specs": ["Integrated Graphics", "Ryzen 5 5600G", "16GB DDR4", "512GB SSD"],
-    "budget": "$550",
-    "useCase": "Office / School"
+    "price": "$550",
+    "useCase": "Office / School",
+    "builtDate": "2025-01-10"
   },
   {
     "id": "4",
     "title": "Compact ITX Build",
     "description": "Small form factor with full-size performance — fits anywhere.",
+    "details": "Full gaming performance in a compact ITX chassis. Cable management and thermals were carefully planned so this small box still runs cool during long gaming sessions.",
     "image": "https://images.unsplash.com/photo-1593305841991-05c297ba4575?w=800&q=80",
     "specs": ["RTX 4060 Ti", "Ryzen 5 7600", "32GB DDR5", "1TB NVMe"],
-    "budget": "$1,100",
-    "useCase": "Compact Gaming"
+    "price": "$1,100",
+    "useCase": "Compact Gaming",
+    "builtDate": "2025-03-22"
   }
 ]

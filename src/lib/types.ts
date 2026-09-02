@@ -26,31 +26,50 @@ export interface Message {
   build_request_id: string;
   sender_id: string;
   content: string;
+  reply_to_id?: string | null;
   created_at: string;
   sender_name?: string;
+  reply_to?: {
+    id: string;
+    content: string;
+    sender_name?: string;
+  } | null;
 }
 
 export interface BuildShowcase {
   id: string;
   title: string;
   description: string;
+  details: string;
   image: string;
   specs: string[];
-  budget: string;
+  price: string;
   useCase: string;
+  builtDate: string | null;
 }
 
 export interface ShowcaseBuildRow {
   id: string;
   title: string;
   description: string;
+  details: string;
   image_url: string;
   specs: string[];
-  budget: string;
+  price: string;
+  budget?: string;
   use_case: string;
+  built_date: string | null;
   display_order: number;
   created_at: string;
   updated_at: string;
+}
+
+export function formatBuiltDate(date: string | null): string {
+  if (!date) return "";
+  return new Date(`${date}T12:00:00`).toLocaleDateString("en-CA", {
+    year: "numeric",
+    month: "long",
+  });
 }
 
 export function toBuildShowcase(row: ShowcaseBuildRow): BuildShowcase {
@@ -58,10 +77,12 @@ export function toBuildShowcase(row: ShowcaseBuildRow): BuildShowcase {
     id: row.id,
     title: row.title,
     description: row.description,
+    details: row.details || row.description,
     image: row.image_url,
     specs: row.specs ?? [],
-    budget: row.budget,
+    price: row.price || row.budget || "",
     useCase: row.use_case,
+    builtDate: row.built_date,
   };
 }
 
