@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-
-async function signOutAndRedirect(request: NextRequest) {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
-  const url = new URL("/", request.url);
-  return NextResponse.redirect(url);
-}
+import { getSiteOrigin } from "@/lib/site-url";
 
 export async function POST(request: NextRequest) {
-  return signOutAndRedirect(request);
-}
+  const supabase = await createClient();
+  await supabase.auth.signOut();
 
-export async function GET(request: NextRequest) {
-  return signOutAndRedirect(request);
+  const origin = getSiteOrigin(request);
+  return NextResponse.redirect(`${origin}/`);
 }

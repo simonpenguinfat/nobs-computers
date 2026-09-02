@@ -1,11 +1,13 @@
 import { BUILD_STATUSES } from "@/lib/types";
 import type { BuildRequest } from "@/lib/types";
+import DeliveryConfirmation from "@/components/DeliveryConfirmation";
 
 interface BuildStatusCardProps {
   request: BuildRequest | null;
+  onRequestUpdated?: (request: BuildRequest | null) => void;
 }
 
-export default function BuildStatusCard({ request }: BuildStatusCardProps) {
+export default function BuildStatusCard({ request, onRequestUpdated }: BuildStatusCardProps) {
   if (!request) {
     return (
       <div className="bg-surface-card border border-border rounded-xl p-6 text-center">
@@ -63,6 +65,19 @@ export default function BuildStatusCard({ request }: BuildStatusCardProps) {
           <p className="text-xs text-neutral-500 mb-0.5">Your Existing Parts</p>
           <p className="text-sm text-neutral-700">{request.existing_parts}</p>
         </div>
+      )}
+
+      {request.status === "not_received" && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-sm text-red-800 font-medium">Delivery issue reported</p>
+          <p className="text-sm text-red-700 mt-1">
+            We&apos;ve been notified and will follow up with you shortly.
+          </p>
+        </div>
+      )}
+
+      {onRequestUpdated && (
+        <DeliveryConfirmation request={request} onUpdated={onRequestUpdated} />
       )}
     </div>
   );

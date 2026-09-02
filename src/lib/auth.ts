@@ -14,23 +14,25 @@ export async function getUserRole(
 
   if (error) {
     console.error("Failed to load profile role:", error.message);
+    return "buyer";
   }
 
   if (profile?.role === "builder" || profile?.role === "buyer") {
     return profile.role;
   }
 
-  // Profile missing — default new accounts to buyer
-  const role: UserRole = "buyer";
+  // Profile missing — create a buyer profile (never overwrite an existing role)
+  await supabase.from("profiles").upsert(
+    {
+      id: authUser.id,
+      email: authUser.email ?? "",
+      full_name: authUser.user_metadata?.full_name ?? "",
+      role: "buyer",
+    },
+    { onConflict: "id", ignoreDuplicates: true }
+  );
 
-  await supabase.from("profiles").upsert({
-    id: authUser.id,
-    email: authUser.email ?? "",
-    full_name: authUser.user_metadata?.full_name ?? "",
-    role,
-  });
-
-  return role;
+  return "buyer";
 }
 
 export function dashboardPathForRole(role: UserRole): "/admin" | "/buyer" {

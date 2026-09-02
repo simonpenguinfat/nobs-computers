@@ -14,6 +14,7 @@ export default function ChatBox({ buildRequestId, userId, userName }: ChatBoxPro
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const supabase = useMemo(() => createClient(), []);
 
@@ -87,12 +88,15 @@ export default function ChatBox({ buildRequestId, userId, userName }: ChatBoxPro
     if (!newMessage.trim() || sending) return;
 
     setSending(true);
-    const { error: sendError } = await supabase.from("messages").insert({
+    setSendError("");
+    const { error: insertError } = await supabase.from("messages").insert({
       build_request_id: buildRequestId,
       sender_id: userId,
       content: newMessage.trim(),
     });
-    if (!sendError) {
+    if (insertError) {
+      setSendError(insertError.message);
+    } else {
       setNewMessage("");
     }
     setSending(false);
@@ -141,12 +145,15 @@ export default function ChatBox({ buildRequestId, userId, userName }: ChatBoxPro
         <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={handleSend} className="p-3 border-t border-border flex gap-2 bg-white">
+      <form onSubmit={handleSend} className="p-3 border-t border-border flex flex-col gap-2 bg-white">
+        {sendError && <p className="text-red-600 text-xs">{sendError}</p>}
+        <div className="flex gap-2">
         <input
           type="text"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="Type a message..."
+          maxLength={2000}
           className="flex-1 min-w-0 bg-white border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-neutral-400 transition-colors"
         />
         <button
@@ -156,6 +163,7 @@ export default function ChatBox({ buildRequestId, userId, userName }: ChatBoxPro
         >
           Send
         </button>
+        </div>
       </form>
     </div>
   );

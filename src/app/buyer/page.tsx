@@ -24,6 +24,7 @@ export default async function BuyerPage() {
     .from("build_requests")
     .select("*")
     .eq("buyer_id", user.id)
+    .neq("status", "confirmed")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();

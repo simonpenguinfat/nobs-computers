@@ -24,6 +24,13 @@ export default function BuyerDashboardClient({
     initialRequest ? "status" : "survey"
   );
 
+  function handleRequestUpdated(updated: BuildRequest | null) {
+    setRequest(updated);
+    if (!updated) {
+      setMobileTab("survey");
+    }
+  }
+
   function handleRequestSubmitted(newRequest: BuildRequest) {
     setRequest(newRequest);
     setMobileTab("status");
@@ -67,7 +74,7 @@ export default function BuyerDashboardClient({
         </div>
 
         <div className={`space-y-4 sm:space-y-6 ${mobileTab !== "status" ? "hidden lg:block" : ""}`}>
-          <BuildStatusCard request={request} />
+          <BuildStatusCard request={request} onRequestUpdated={handleRequestUpdated} />
 
           {request ? (
             <ChatBox

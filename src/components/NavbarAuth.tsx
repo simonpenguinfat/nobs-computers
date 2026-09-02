@@ -7,6 +7,7 @@ import Navbar from "./Navbar";
 
 export default function NavbarAuth() {
   const [user, setUser] = useState<{ email: string; role: string } | null>(null);
+  const [loading, setLoading] = useState(true);
   const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
@@ -17,6 +18,7 @@ export default function NavbarAuth() {
 
       if (!authUser) {
         setUser(null);
+        setLoading(false);
         return;
       }
 
@@ -25,6 +27,7 @@ export default function NavbarAuth() {
         email: authUser.email ?? "",
         role,
       });
+      setLoading(false);
     }
 
     loadUser();
@@ -38,5 +41,5 @@ export default function NavbarAuth() {
     return () => subscription.unsubscribe();
   }, [supabase]);
 
-  return <Navbar user={user} />;
+  return <Navbar user={user} loading={loading} />;
 }

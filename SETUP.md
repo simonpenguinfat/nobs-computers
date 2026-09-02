@@ -56,6 +56,7 @@ Supabase handles login, database, and chat. It's free for small sites.
 4. Copy **everything** in that file and paste it into the SQL Editor
 5. Click **Run** (or press Ctrl+Enter)
 6. You should see "Success. No rows returned"
+7. Run `supabase/fix-all-security.sql` the same way (security fixes)
 
 ---
 
@@ -78,6 +79,7 @@ Supabase handles login, database, and chat. It's free for small sites.
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://your-actual-url.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-actual-anon-key-here
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
 4. Save the file

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import LogoutButton from "@/components/LogoutButton";
 import BuilderDashboard from "@/components/BuilderDashboard";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/auth";
@@ -26,6 +27,7 @@ export default async function AdminPage() {
   const { data: clients } = await supabase
     .from("build_requests")
     .select("*, profiles!buyer_id(*)")
+    .neq("status", "confirmed")
     .order("created_at", { ascending: false });
 
   return (
@@ -43,14 +45,7 @@ export default async function AdminPage() {
             >
               Website
             </Link>
-            <form action="/api/auth/signout" method="post">
-              <button
-                type="submit"
-                className="text-sm px-3 py-2 rounded-lg border border-border hover:bg-neutral-50 text-neutral-700"
-              >
-                Log out
-              </button>
-            </form>
+            <LogoutButton className="text-sm px-3 py-2 rounded-lg border border-border hover:bg-neutral-50 text-neutral-700" />
           </div>
         </div>
       </header>

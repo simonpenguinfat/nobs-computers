@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getUserRole } from "@/lib/auth";
+import { formatAuthError } from "@/lib/auth-errors";
 import SetupNotice from "@/components/SetupNotice";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import site from "../../../../content/site.json";
@@ -28,7 +29,7 @@ export default function AdminLoginForm() {
     });
 
     if (authError) {
-      setError(authError.message);
+      setError(formatAuthError(authError.message));
       setLoading(false);
       return;
     }

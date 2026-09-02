@@ -114,7 +114,7 @@ create table if not exists public.build_requests (
 
   status text not null default 'pending'
 
-    check (status in ('pending', 'in_progress', 'completed', 'cancelled')),
+    check (status in ('pending', 'in_progress', 'completed', 'cancelled', 'confirmed', 'not_received')),
 
   estimated_cost numeric,
 
@@ -252,7 +252,7 @@ begin
 
     coalesce(new.raw_user_meta_data->>'full_name', ''),
 
-    coalesce(new.raw_user_meta_data->>'role', 'buyer')
+    'buyer'
 
   );
 
@@ -274,9 +274,11 @@ create trigger on_auth_user_created
 
 
 
--- Enable realtime for messages
-
-alter publication supabase_realtime add table public.messages;
+-- Enable realtime for messages (safe to re-run)
+do $$ begin
+  alter publication supabase_realtime add table public.messages;
+exception when duplicate_object then null;
+end $$;
 
 -- Table permissions (required for the app to read/write data)
 grant usage on schema public to authenticated;

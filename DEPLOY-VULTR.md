@@ -22,14 +22,14 @@ Then run these commands **one at a time**:
 apt update && apt upgrade -y
 ```
 
-### 2. Install Node.js
+### 2. Install Node.js 22 (required by Supabase)
 
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 apt install -y nodejs
 ```
 
-Verify: `node --version` should show v20.x.x
+Verify: `node --version` should show v22.x.x
 
 ### 3. Install PM2 (keeps your site running)
 
@@ -71,15 +71,7 @@ cd Computer
 
 Use FileZilla or WinSCP to copy the entire `Computer` folder to `/var/www/Computer` on the VM.
 
-### 8. Install dependencies and build
-
-```bash
-cd /var/www/Computer
-npm install
-npm run build
-```
-
-### 9. Create environment file on the VM
+### 8. Create environment file on the VM (BEFORE building)
 
 ```bash
 nano /var/www/Computer/.env.local
@@ -90,15 +82,37 @@ Paste your Supabase keys (same as your local `.env.local`):
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://your-url.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_SITE_URL=https://nobscomputers.ca
 ```
 
 Press `Ctrl+X`, then `Y`, then `Enter` to save.
+
+**Important:** The build will fail without this file. Create it before `npm run build`.
+
+### 8b. Configure Supabase for production
+
+In your Supabase dashboard:
+
+1. **Authentication** → **URL Configuration**
+2. Set **Site URL** to `https://nobscomputers.ca`
+3. Add redirect URLs: `https://nobscomputers.ca/**` and `https://nobscomputers.ca/auth/callback`
+4. Run `supabase/fix-all-security.sql` in the SQL Editor (if not done already)
+
+See `supabase/FIX-ALL.md` for email rate limits and full checklist.
+
+### 9. Install dependencies and build
+
+```bash
+cd /var/www/Computer
+npm install
+npm run build
+```
 
 ### 10. Start the app with PM2
 
 ```bash
 cd /var/www/Computer
-pm2 start npm --name "pc-forge" -- start
+pm2 start npm --name "nobs-computers" -- start
 pm2 save
 pm2 startup
 ```
@@ -108,7 +122,7 @@ Run the command that `pm2 startup` prints (it starts with `sudo env PATH=...`).
 ### 11. Configure Nginx
 
 ```bash
-nano /etc/nginx/sites-available/pc-forge
+nano /etc/nginx/sites-available/nobs-computers
 ```
 
 Paste this (replace `yourname.ca` with your actual domain):
@@ -125,6 +139,8 @@ server {
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
         proxy_cache_bypass $http_upgrade;
     }
 }
@@ -133,7 +149,7 @@ server {
 Save and enable:
 
 ```bash
-ln -s /etc/nginx/sites-available/pc-forge /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/nobs-computers /etc/nginx/sites-enabled/
 nginx -t
 systemctl reload nginx
 ```
@@ -189,7 +205,7 @@ git push
 SSH in and run this one-liner:
 
 ```bash
-cd /var/www/Computer && git pull && npm install && npm run build && pm2 restart pc-forge
+cd /var/www/Computer && git pull && npm install && npm run build && pm2 restart nobs-computers
 ```
 
 That's it. Your live site updates in ~30 seconds.
@@ -205,16 +221,16 @@ Save this somewhere handy:
 ssh root@YOUR_VM_IP
 
 # Deploy updates
-cd /var/www/Computer && git pull && npm install && npm run build && pm2 restart pc-forge
+cd /var/www/Computer && git pull && npm install && npm run build && pm2 restart nobs-computers
 
 # Check if site is running
 pm2 status
 
 # View error logs
-pm2 logs pc-forge
+pm2 logs nobs-computers
 
 # Restart site
-pm2 restart pc-forge
+pm2 restart nobs-computers
 ```
 
 ---
@@ -222,13 +238,13 @@ pm2 restart pc-forge
 ## Troubleshooting
 
 **Site shows "502 Bad Gateway"**
-→ App isn't running. Run `pm2 status` and `pm2 restart pc-forge`.
+→ App isn't running. Run `pm2 status` and `pm2 restart nobs-computers`.
 
 **HTTPS not working**
 → DNS may not have propagated yet. Wait and retry certbot.
 
 **Changes not showing**
-→ Did you run `npm run build` and `pm2 restart pc-forge` after pulling?
+→ Did you run `npm run build` and `pm2 restart nobs-computers` after pulling?
 
 **"Cannot find module" errors**
 → Run `npm install` in `/var/www/Computer`.

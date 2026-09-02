@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getUserRole } from "@/lib/auth";
+import { formatAuthError } from "@/lib/auth-errors";
+import { getSafeRedirectPath } from "@/lib/redirect";
 import NavbarAuth from "@/components/NavbarAuth";
 import SetupNotice from "@/components/SetupNotice";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
@@ -15,7 +17,10 @@ export default function LoginForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
+
+  const verificationError = searchParams.get("error") === "verification";
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -28,7 +33,7 @@ export default function LoginForm() {
     });
 
     if (authError) {
-      setError(authError.message);
+      setError(formatAuthError(authError.message));
       setLoading(false);
       return;
     }
@@ -43,7 +48,8 @@ export default function LoginForm() {
         return;
       }
 
-      router.push("/buyer");
+      const destination = getSafeRedirectPath(searchParams.get("redirect"), "/buyer");
+      router.push(destination);
       router.refresh();
     }
 
@@ -62,6 +68,12 @@ export default function LoginForm() {
             </p>
 
             {!isSupabaseConfigured() && <SetupNotice />}
+
+            {verificationError && (
+              <p className="text-red-600 text-sm mb-4">
+                Email verification failed. Try signing up again or contact support.
+              </p>
+            )}
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div>

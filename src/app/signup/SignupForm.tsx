@@ -7,12 +7,14 @@ import { createClient } from "@/lib/supabase/client";
 import NavbarAuth from "@/components/NavbarAuth";
 import SetupNotice from "@/components/SetupNotice";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { formatAuthError } from "@/lib/auth-errors";
 
 export default function SignupForm() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [confirmationSent, setConfirmationSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
@@ -21,34 +23,63 @@ export default function SignupForm() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setConfirmationSent(false);
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+    const redirectUrl = `${siteUrl}/auth/callback?next=/buyer`;
 
     const { data, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName, role: "buyer" },
+        data: { full_name: fullName },
+        emailRedirectTo: redirectUrl,
       },
     });
 
     if (authError) {
-      setError(authError.message);
+      setError(formatAuthError(authError.message));
       setLoading(false);
       return;
     }
 
-    if (data.user) {
-      await supabase.from("profiles").upsert({
-        id: data.user.id,
-        email: data.user.email ?? email,
-        full_name: fullName,
-        role: "buyer",
-      });
+    if (data.user && !data.session) {
+      setConfirmationSent(true);
+      setLoading(false);
+      return;
+    }
 
+    if (data.session) {
       router.push("/buyer");
       router.refresh();
     }
 
     setLoading(false);
+  }
+
+  if (confirmationSent) {
+    return (
+      <>
+        <NavbarAuth />
+        <div className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center px-4 sm:px-6 py-8">
+          <div className="w-full max-w-md">
+            <div className="bg-surface-card border border-border rounded-xl p-6 sm:p-8 shadow-sm text-center">
+              <h1 className="text-2xl font-bold mb-2 text-neutral-900">Check your email</h1>
+              <p className="text-neutral-500 text-sm mb-6">
+                We sent a verification link to <strong className="text-neutral-700">{email}</strong>.
+                Click the link to activate your account, then log in.
+              </p>
+              <Link
+                href="/login"
+                className="inline-block px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-medium rounded-lg transition-colors"
+              >
+                Go to login
+              </Link>
+            </div>
+          </div>
+        </div>
+      </>
+    );
   }
 
   return (

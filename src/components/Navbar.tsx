@@ -1,11 +1,13 @@
 import Link from "next/link";
 import site from "../../content/site.json";
+import LogoutButton from "./LogoutButton";
 
 interface NavbarProps {
   user?: { email: string; role: string } | null;
+  loading?: boolean;
 }
 
-export default function Navbar({ user }: NavbarProps) {
+export default function Navbar({ user, loading }: NavbarProps) {
   return (
     <nav className="border-b border-border bg-white/95 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-3">
@@ -19,7 +21,9 @@ export default function Navbar({ user }: NavbarProps) {
         </Link>
 
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-          {user ? (
+          {loading ? (
+            <div className="h-9 w-24 bg-neutral-100 rounded-lg animate-pulse" />
+          ) : user ? (
             <>
               <Link
                 href={user.role === "builder" ? "/admin" : "/buyer"}
@@ -27,14 +31,7 @@ export default function Navbar({ user }: NavbarProps) {
               >
                 {user.role === "builder" ? "Admin" : "Dashboard"}
               </Link>
-              <form action="/api/auth/signout" method="post">
-                <button
-                  type="submit"
-                  className="text-sm px-3 sm:px-4 py-2 rounded-lg border border-border hover:bg-surface-light transition-colors text-neutral-700"
-                >
-                  Log out
-                </button>
-              </form>
+              <LogoutButton className="text-sm px-3 sm:px-4 py-2 rounded-lg border border-border hover:bg-surface-light transition-colors text-neutral-700" />
             </>
           ) : (
             <>
