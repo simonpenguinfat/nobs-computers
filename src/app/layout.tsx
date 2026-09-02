@@ -1,9 +1,18 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "NoBS Computers — Custom Desktop Builds",
+  title: "NO BS COMPUTERS — Custom Desktop Builds",
   description: "Honest custom PC builds matched to your needs and budget.",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export const viewport: Viewport = {
@@ -19,7 +28,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased min-h-screen bg-white text-neutral-900">
+      <body className={`${inter.className} antialiased min-h-screen bg-white text-neutral-950`}>
         {children}
       </body>
     </html>

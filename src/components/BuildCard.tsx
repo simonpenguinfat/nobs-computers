@@ -13,7 +13,7 @@ export default function BuildCard({ build }: BuildCardProps) {
   return (
     <Link
       href={`/builds/${build.id}`}
-      className="group block rounded-xl overflow-hidden bg-surface-card border border-border hover:border-neutral-400 transition-all duration-300 hover:shadow-md"
+      className="group block rounded-xl overflow-hidden bg-surface-card border border-border hover:border-brand-300 transition-all duration-300 hover:shadow-md hover:shadow-brand-100/50"
     >
       <div className="relative h-44 sm:h-48 overflow-hidden bg-neutral-100">
         <Image
@@ -57,7 +57,7 @@ export default function BuildCard({ build }: BuildCardProps) {
             </span>
           )}
         </div>
-        <p className="text-sm font-medium text-neutral-900">View details →</p>
+        <p className="text-sm font-semibold text-brand-600">View details →</p>
       </div>
     </Link>
   );

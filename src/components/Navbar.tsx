@@ -1,5 +1,5 @@
 import Link from "next/link";
-import site from "../../content/site.json";
+import BrandLogo from "./BrandLogo";
 import LogoutButton from "./LogoutButton";
 
 interface NavbarProps {
@@ -10,15 +10,8 @@ interface NavbarProps {
 export default function Navbar({ user, loading }: NavbarProps) {
   return (
     <nav className="border-b border-border bg-white/95 backdrop-blur-md sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-3">
-        <Link href="/" className="flex items-center gap-2.5 min-w-0 group">
-          <div className="w-8 h-8 shrink-0 rounded-md bg-brand-600 flex items-center justify-center text-white font-bold text-xs tracking-tight">
-            NB
-          </div>
-          <span className="font-semibold text-base sm:text-lg truncate group-hover:text-neutral-600 transition-colors">
-            {site.siteName}
-          </span>
-        </Link>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 sm:h-[4.5rem] flex items-center justify-between gap-3">
+        <BrandLogo />
 
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           {loading ? (
@@ -27,7 +20,7 @@ export default function Navbar({ user, loading }: NavbarProps) {
             <>
               <Link
                 href={user.role === "builder" ? "/admin" : "/buyer"}
-                className="text-sm text-neutral-600 hover:text-neutral-900 transition-colors px-2 sm:px-3 py-2"
+                className="text-sm text-neutral-700 hover:text-brand-600 transition-colors px-2 sm:px-3 py-2 font-medium"
               >
                 {user.role === "builder" ? "Admin" : "Dashboard"}
               </Link>
@@ -37,13 +30,13 @@ export default function Navbar({ user, loading }: NavbarProps) {
             <>
               <Link
                 href="/login"
-                className="text-sm text-neutral-600 hover:text-neutral-900 transition-colors px-2 sm:px-3 py-2"
+                className="text-sm text-neutral-700 hover:text-brand-600 transition-colors px-2 sm:px-3 py-2 font-medium"
               >
                 Log in
               </Link>
               <Link
                 href="/signup"
-                className="text-sm px-3 sm:px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white font-medium transition-colors"
+                className="text-sm px-3 sm:px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white font-semibold transition-colors"
               >
                 Sign up
               </Link>

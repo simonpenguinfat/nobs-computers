@@ -7,8 +7,8 @@ import { createClient } from "@/lib/supabase/client";
 import { getUserRole } from "@/lib/auth";
 import { formatAuthError } from "@/lib/auth-errors";
 import SetupNotice from "@/components/SetupNotice";
+import BrandLogo from "@/components/BrandLogo";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
-import site from "../../../../content/site.json";
 
 export default function AdminLoginForm() {
   const [email, setEmail] = useState("");
@@ -54,11 +54,11 @@ export default function AdminLoginForm() {
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col">
       <header className="border-b border-border bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="font-semibold text-neutral-900 hover:text-neutral-600">
-            {site.siteName}
-          </Link>
-          <span className="text-xs text-neutral-500 uppercase tracking-wider">Admin</span>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <BrandLogo href="/" />
+          <span className="text-xs text-brand-600 font-semibold uppercase tracking-[0.2em]">
+            Admin
+          </span>
         </div>
       </header>
 

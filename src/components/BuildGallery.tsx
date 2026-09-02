@@ -10,7 +10,10 @@ export default function BuildGallery({ builds }: BuildGalleryProps) {
     <section id="previous-builds" className="py-12 sm:py-20 px-4 sm:px-6 bg-white">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8 sm:mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-3 text-neutral-900">
+          <p className="text-brand-600 font-semibold text-xs tracking-[0.25em] uppercase mb-3">
+            Portfolio
+          </p>
+          <h2 className="text-2xl sm:text-3xl font-bold mb-3 text-neutral-950">
             Previous Builds
           </h2>
           <p className="text-neutral-500 max-w-xl mx-auto text-sm sm:text-base">
