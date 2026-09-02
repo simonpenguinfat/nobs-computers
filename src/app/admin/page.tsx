@@ -5,6 +5,7 @@ import BuilderDashboard from "@/components/BuilderDashboard";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/auth";
 import type { BuildRequest, Profile } from "@/lib/types";
+import { ACTIVE_STATUSES } from "@/lib/types";
 import site from "../../../content/site.json";
 
 export default async function AdminPage() {
@@ -27,7 +28,7 @@ export default async function AdminPage() {
   const { data: clients } = await supabase
     .from("build_requests")
     .select("*, profiles!buyer_id(*)")
-    .neq("status", "confirmed")
+    .in("status", [...ACTIVE_STATUSES])
     .order("created_at", { ascending: false });
 
   return (

@@ -1,6 +1,7 @@
 import { BUILD_STATUSES } from "@/lib/types";
 import type { BuildRequest } from "@/lib/types";
 import DeliveryConfirmation from "@/components/DeliveryConfirmation";
+import BuyerOrderActions from "@/components/BuyerOrderActions";
 
 interface BuildStatusCardProps {
   request: BuildRequest | null;
@@ -77,7 +78,10 @@ export default function BuildStatusCard({ request, onRequestUpdated }: BuildStat
       )}
 
       {onRequestUpdated && (
-        <DeliveryConfirmation request={request} onUpdated={onRequestUpdated} />
+        <>
+          <BuyerOrderActions request={request} onUpdated={onRequestUpdated} />
+          <DeliveryConfirmation request={request} onUpdated={onRequestUpdated} />
+        </>
       )}
     </div>
   );

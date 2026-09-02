@@ -114,7 +114,7 @@ create table if not exists public.build_requests (
 
   status text not null default 'pending'
 
-    check (status in ('pending', 'in_progress', 'completed', 'cancelled', 'confirmed', 'not_received')),
+    check (status in ('pending', 'in_progress', 'completed', 'cancelled', 'confirmed', 'not_received', 'rejected')),
 
   estimated_cost numeric,
 

@@ -28,6 +28,15 @@ export default function BuyerSurvey({
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const supabase = useMemo(() => createClient(), []);
+  const canEdit = !existingRequest || existingRequest.status === "pending";
+
+  if (existingRequest && !canEdit) {
+    return (
+      <p className="text-sm text-neutral-500">
+        Your request has been accepted. Contact us in chat if you need changes.
+      </p>
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

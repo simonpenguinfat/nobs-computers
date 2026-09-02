@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { BUILD_STATUSES } from "@/lib/types";
+import { BUILD_STATUSES, isArchivedStatus } from "@/lib/types";
 import type { BuildRequest, Profile } from "@/lib/types";
 import ChatBox from "./ChatBox";
 
@@ -31,9 +31,16 @@ export default function BuilderDashboard({
 
   const selected = clients.find((c) => c.id === selectedId) ?? null;
 
-  function openClient(clientId: string) {
-    setSelectedId(clientId);
+  function removeClient(requestId: string) {
+    setClients((prev) => prev.filter((c) => c.id !== requestId));
+    setSelectedId(null);
     setActiveTab("build");
+  }
+
+  function openClient(clientId: string) {
+    const client = clients.find((c) => c.id === clientId);
+    setSelectedId(clientId);
+    setActiveTab(client?.status === "pending" ? "chat" : "build");
   }
 
   function closeClient() {
@@ -54,11 +61,34 @@ export default function BuilderDashboard({
       .single();
 
     if (data) {
-      setClients((prev) =>
-        prev.map((c) => (c.id === requestId ? (data as ClientWithProfile) : c))
-      );
+      if (isArchivedStatus(status)) {
+        removeClient(requestId);
+      } else {
+        setClients((prev) =>
+          prev.map((c) => (c.id === requestId ? (data as ClientWithProfile) : c))
+        );
+      }
     }
     setUpdating(false);
+  }
+
+  async function acceptOrder(requestId: string) {
+    await updateStatus(requestId, "in_progress");
+    setActiveTab("build");
+  }
+
+  async function declineOrder(requestId: string) {
+    if (!confirm("Decline this order? It will be removed from your dashboard.")) {
+      return;
+    }
+    await updateStatus(requestId, "rejected");
+  }
+
+  async function cancelOrder(requestId: string) {
+    if (!confirm("Cancel this order? It will be removed from your dashboard.")) {
+      return;
+    }
+    await updateStatus(requestId, "cancelled");
   }
 
   async function updateEstimate(requestId: string, cost: number) {
@@ -82,15 +112,14 @@ export default function BuilderDashboard({
 
   return (
     <div className="space-y-6">
-      {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
         <div className="bg-surface-card border border-border rounded-xl p-3 sm:p-4 text-center">
           <p className="text-xl sm:text-2xl font-bold text-neutral-900">{clients.length}</p>
-          <p className="text-xs text-neutral-500 mt-1">Total Clients</p>
+          <p className="text-xs text-neutral-500 mt-1">Active Orders</p>
         </div>
         <div className="bg-surface-card border border-border rounded-xl p-3 sm:p-4 text-center">
           <p className="text-xl sm:text-2xl font-bold text-amber-600">{pendingCount}</p>
-          <p className="text-xs text-neutral-500 mt-1">Pending</p>
+          <p className="text-xs text-neutral-500 mt-1">Needs Review</p>
         </div>
         <div className="bg-surface-card border border-border rounded-xl p-3 sm:p-4 text-center">
           <p className="text-xl sm:text-2xl font-bold text-green-600">{activeCount}</p>
@@ -103,12 +132,11 @@ export default function BuilderDashboard({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Client list — always visible on desktop, hidden on mobile when detail open */}
         <div className={`lg:col-span-1 ${selected ? "hidden lg:block" : ""}`}>
-          <h2 className="font-semibold mb-3 text-neutral-900">Clients</h2>
+          <h2 className="font-semibold mb-3 text-neutral-900">Orders</h2>
           {clients.length === 0 ? (
             <div className="bg-surface-card border border-border rounded-xl p-6 text-center">
-              <p className="text-neutral-500 text-sm">No clients yet.</p>
+              <p className="text-neutral-500 text-sm">No active orders.</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -122,9 +150,11 @@ export default function BuilderDashboard({
                     className={`w-full text-left p-4 rounded-xl border transition-all ${
                       isSelected
                         ? "border-neutral-900 bg-neutral-50"
-                        : client.status === "not_received"
-                          ? "border-red-300 bg-red-50 hover:border-red-400"
-                          : "border-border bg-surface-card hover:border-neutral-300"
+                        : client.status === "pending"
+                          ? "border-amber-300 bg-amber-50 hover:border-amber-400"
+                          : client.status === "not_received"
+                            ? "border-red-300 bg-red-50 hover:border-red-400"
+                            : "border-border bg-surface-card hover:border-neutral-300"
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1 gap-2">
@@ -140,7 +170,9 @@ export default function BuilderDashboard({
                     <p className="text-xs text-neutral-500">
                       {client.use_case} · ${client.budget?.toLocaleString()}
                     </p>
-                    <p className="text-xs text-neutral-700 mt-2 font-medium">View build →</p>
+                    <p className="text-xs text-neutral-700 mt-2 font-medium">
+                      {client.status === "pending" ? "Review & chat →" : "View build →"}
+                    </p>
                   </button>
                 );
               })}
@@ -148,7 +180,6 @@ export default function BuilderDashboard({
           )}
         </div>
 
-        {/* Client detail — shown when a client is clicked */}
         <div className={`lg:col-span-2 ${!selected ? "hidden lg:block" : ""}`}>
           {selected ? (
             <div className="space-y-4">
@@ -156,11 +187,10 @@ export default function BuilderDashboard({
                 onClick={closeClient}
                 className="lg:hidden text-sm text-neutral-700 hover:text-neutral-900 font-medium flex items-center gap-1 mb-2"
               >
-                ← Back to clients
+                ← Back to orders
               </button>
 
               <div className="bg-surface-card border border-border rounded-xl overflow-hidden">
-                {/* Header + tabs */}
                 <div className="px-4 sm:px-5 pt-5 pb-0 border-b border-border bg-white">
                   <h2 className="font-semibold mb-4 text-neutral-900">
                     {selected.profiles?.full_name || "Client"}&apos;s Build
@@ -185,6 +215,9 @@ export default function BuilderDashboard({
                       }`}
                     >
                       Chat
+                      {selected.status === "pending" && (
+                        <span className="ml-1.5 text-amber-600">●</span>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -217,6 +250,40 @@ export default function BuilderDashboard({
                         </div>
                       </div>
 
+                      {selected.status === "pending" && (
+                        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+                          <p className="text-sm text-amber-900">
+                            <strong>Review this order.</strong> Chat with the customer first,
+                            then accept or decline.
+                          </p>
+                          <div className="flex flex-col sm:flex-row gap-3">
+                            <button
+                              type="button"
+                              onClick={() => acceptOrder(selected.id)}
+                              disabled={updating}
+                              className="flex-1 py-2.5 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white font-medium rounded-lg text-sm transition-colors"
+                            >
+                              Accept Order
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => declineOrder(selected.id)}
+                              disabled={updating}
+                              className="flex-1 py-2.5 border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50 font-medium rounded-lg text-sm transition-colors"
+                            >
+                              Decline Order
+                            </button>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab("chat")}
+                            className="w-full py-2 text-sm text-amber-800 hover:text-amber-900 font-medium"
+                          >
+                            Open chat with customer →
+                          </button>
+                        </div>
+                      )}
+
                       {selected.status === "not_received" && (
                         <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
                           <p className="text-sm font-medium text-red-800">
@@ -236,51 +303,67 @@ export default function BuilderDashboard({
                         </div>
                       )}
 
-                      <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-end">
-                        <div className="flex-1 sm:flex-none">
-                          <label className="text-xs text-neutral-500 block mb-1">
-                            Status
-                          </label>
-                          <select
-                            value={selected.status}
-                            disabled={updating}
-                            onChange={(e) =>
-                              updateStatus(
-                                selected.id,
-                                e.target.value as BuildRequest["status"]
-                              )
-                            }
-                            className="w-full sm:w-auto bg-white border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-neutral-400"
-                          >
-                            {Object.entries(BUILD_STATUSES)
-                              .filter(([key]) => key !== "confirmed")
-                              .map(([key, val]) => (
-                              <option key={key} value={key}>
-                                {val.label}
-                              </option>
-                            ))}
-                          </select>
+                      {selected.status !== "pending" && (
+                        <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-end">
+                          <div className="flex-1 sm:flex-none">
+                            <label className="text-xs text-neutral-500 block mb-1">
+                              Status
+                            </label>
+                            <select
+                              value={selected.status}
+                              disabled={updating}
+                              onChange={(e) =>
+                                updateStatus(
+                                  selected.id,
+                                  e.target.value as BuildRequest["status"]
+                                )
+                              }
+                              className="w-full sm:w-auto bg-white border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-neutral-400"
+                            >
+                              {Object.entries(BUILD_STATUSES)
+                                .filter(
+                                  ([key]) =>
+                                    !["confirmed", "rejected", "pending"].includes(key)
+                                )
+                                .map(([key, val]) => (
+                                  <option key={key} value={key}>
+                                    {val.label}
+                                  </option>
+                                ))}
+                            </select>
+                          </div>
+                          <div className="flex-1 sm:flex-none">
+                            <label className="text-xs text-neutral-500 block mb-1">
+                              Estimated Cost (CAD)
+                            </label>
+                            <input
+                              type="number"
+                              defaultValue={selected.estimated_cost ?? ""}
+                              onBlur={(e) => {
+                                const val = parseFloat(e.target.value);
+                                if (!isNaN(val)) updateEstimate(selected.id, val);
+                              }}
+                              placeholder="Enter quote"
+                              className="w-full sm:w-36 bg-white border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-neutral-400"
+                            />
+                          </div>
                         </div>
-                        <div className="flex-1 sm:flex-none">
-                          <label className="text-xs text-neutral-500 block mb-1">
-                            Estimated Cost (CAD)
-                          </label>
-                          <input
-                            type="number"
-                            defaultValue={selected.estimated_cost ?? ""}
-                            onBlur={(e) => {
-                              const val = parseFloat(e.target.value);
-                              if (!isNaN(val)) updateEstimate(selected.id, val);
-                            }}
-                            placeholder="Enter quote"
-                            className="w-full sm:w-36 bg-white border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-neutral-400"
-                          />
-                        </div>
-                      </div>
+                      )}
+
+                      {selected.status !== "pending" && (
+                        <button
+                          type="button"
+                          onClick={() => cancelOrder(selected.id)}
+                          disabled={updating}
+                          className="mt-4 w-full py-2.5 border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          Cancel Order
+                        </button>
+                      )}
 
                       <button
                         onClick={() => setActiveTab("chat")}
-                        className="mt-6 w-full py-2.5 border border-border text-neutral-700 hover:bg-neutral-50 rounded-lg text-sm font-medium transition-colors"
+                        className="mt-4 w-full py-2.5 border border-border text-neutral-700 hover:bg-neutral-50 rounded-lg text-sm font-medium transition-colors"
                       >
                         Open chat with {selected.profiles?.full_name || "client"}
                       </button>
@@ -298,7 +381,7 @@ export default function BuilderDashboard({
           ) : (
             <div className="bg-surface-card border border-border rounded-xl p-8 sm:p-12 text-center">
               <p className="text-neutral-500 text-sm">
-                Select a client from the list to view their build.
+                Select an order from the list to review and chat.
               </p>
             </div>
           )}

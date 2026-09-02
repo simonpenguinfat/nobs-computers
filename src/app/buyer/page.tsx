@@ -4,6 +4,7 @@ import BuyerDashboardClient from "@/components/BuyerDashboardClient";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/auth";
 import type { BuildRequest } from "@/lib/types";
+import { ACTIVE_STATUSES } from "@/lib/types";
 
 export default async function BuyerPage() {
   const supabase = await createClient();
@@ -24,7 +25,7 @@ export default async function BuyerPage() {
     .from("build_requests")
     .select("*")
     .eq("buyer_id", user.id)
-    .neq("status", "confirmed")
+    .in("status", [...ACTIVE_STATUSES])
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();

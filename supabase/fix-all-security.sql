@@ -77,7 +77,7 @@ where a.buyer_id = b.buyer_id and a.created_at < b.created_at;
 
 create unique index if not exists build_requests_one_active_per_buyer
   on public.build_requests (buyer_id)
-  where status not in ('confirmed');
+  where status not in ('confirmed', 'cancelled', 'rejected');
 
 -- 5. Buyers can read builder names for chat
 drop policy if exists "Buyers can read builder profiles" on public.profiles;
