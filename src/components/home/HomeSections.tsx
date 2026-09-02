@@ -1,5 +1,22 @@
 import Link from "next/link";
+import Image from "next/image";
 import site from "../../../content/site.json";
+
+function NbMonogram({
+  className = "h-10 w-auto",
+}: {
+  className?: string;
+}) {
+  return (
+    <Image
+      src="/nb-monogram.png"
+      alt="No BS Computers"
+      width={120}
+      height={80}
+      className={className}
+    />
+  );
+}
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -14,6 +31,9 @@ export function HomePromises() {
     <section className="py-16 sm:py-20 px-4 sm:px-6 bg-white border-b border-border">
       <div className="max-w-6xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
+          <div className="flex justify-center mb-5">
+            <NbMonogram className="h-12 sm:h-14 w-auto" />
+          </div>
           <SectionLabel>Why No BS</SectionLabel>
           <h2 className="text-2xl sm:text-3xl font-bold text-neutral-950">
             Three promises on every build
@@ -25,9 +45,7 @@ export function HomePromises() {
               key={item.title}
               className="bg-surface-light border border-border rounded-2xl p-6 sm:p-7"
             >
-              <div className="w-10 h-10 rounded-xl bg-brand-600 text-white flex items-center justify-center font-bold text-sm mb-4">
-                NB
-              </div>
+              <NbMonogram className="h-9 w-auto mb-4" />
               <h3 className="font-bold text-lg text-neutral-950 mb-2">{item.title}</h3>
               <p className="text-neutral-600 text-sm leading-relaxed">{item.description}</p>
             </div>
