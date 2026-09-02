@@ -35,10 +35,10 @@ export default function Navbar({ user, loading }: NavbarProps) {
                 Log in
               </Link>
               <Link
-                href="/signup"
+                href="/build"
                 className="text-sm px-3 sm:px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white font-semibold transition-colors"
               >
-                Sign up
+                Build My PC
               </Link>
             </>
           )}

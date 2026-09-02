@@ -8,6 +8,11 @@ import NavbarAuth from "@/components/NavbarAuth";
 import SetupNotice from "@/components/SetupNotice";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { formatAuthError } from "@/lib/auth-errors";
+import {
+  clearBuildRequestDraft,
+  loadBuildRequestDraft,
+} from "@/lib/build-request-draft";
+import { ensureBuyerProfile } from "@/lib/build-requests";
 
 export default function SignupForm() {
   const [fullName, setFullName] = useState("");
@@ -50,6 +55,25 @@ export default function SignupForm() {
     }
 
     if (data.session) {
+      const draft = loadBuildRequestDraft();
+      if (draft && data.user) {
+        await ensureBuyerProfile(supabase, data.user.id, email, fullName);
+        const payload = {
+          use_case: draft.use_case,
+          budget: draft.budget,
+          existing_parts: draft.existing_parts,
+          preferences: draft.preferences,
+          updated_at: new Date().toISOString(),
+        };
+        const { error: insertError } = await supabase.from("build_requests").insert({
+          ...payload,
+          buyer_id: data.user.id,
+          status: "pending",
+        });
+        if (!insertError) {
+          clearBuildRequestDraft();
+        }
+      }
       router.push("/buyer");
       router.refresh();
     }
@@ -90,7 +114,11 @@ export default function SignupForm() {
           <div className="bg-surface-card border border-border rounded-xl p-6 sm:p-8 shadow-sm">
             <h1 className="text-2xl font-bold mb-1 text-neutral-900">Create an account</h1>
             <p className="text-neutral-500 text-sm mb-6">
-              Sign up to request a custom PC build
+              Already submitted a build? Create a password to track it. New here?{" "}
+              <Link href="/build" className="text-brand-600 font-semibold hover:text-brand-500">
+                Start with the questionnaire
+              </Link>
+              .
             </p>
 
             {!isSupabaseConfigured() && <SetupNotice />}

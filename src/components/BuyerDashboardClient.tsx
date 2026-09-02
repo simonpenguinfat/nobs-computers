@@ -7,6 +7,7 @@ import BuyerSurvey from "./BuyerSurvey";
 import BuildStatusCard from "./BuildStatusCard";
 import BuyerSettings from "./BuyerSettings";
 import ChatBox from "./ChatBox";
+import PendingDraftSubmit from "./PendingDraftSubmit";
 
 interface BuyerDashboardProps {
   userId: string;
@@ -74,6 +75,7 @@ export default function BuyerDashboardClient({
 
   return (
     <div className="space-y-4">
+      <PendingDraftSubmit />
       <div className="flex lg:hidden border border-border rounded-lg p-1 bg-surface-light">
         <button type="button" onClick={() => setMobileTab("survey")} className={tabClass("survey")}>
           Request

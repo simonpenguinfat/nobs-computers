@@ -93,10 +93,10 @@ export default async function BuildDetailPage({ params }: BuildDetailPageProps) 
             Want a custom build like this one?
           </p>
           <Link
-            href="/signup"
+            href="/build"
             className="inline-block px-8 py-3 bg-brand-600 hover:bg-brand-500 text-white font-medium rounded-lg transition-colors"
           >
-            Get Your Custom PC
+            Build My PC
           </Link>
         </div>
       </article>

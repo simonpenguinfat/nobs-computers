@@ -2,7 +2,16 @@ import Link from "next/link";
 import Image from "next/image";
 import NavbarAuth from "@/components/NavbarAuth";
 import BuildGallery from "@/components/BuildGallery";
-import BrandLogo from "@/components/BrandLogo";
+import SiteFooter from "@/components/SiteFooter";
+import {
+  HomeFAQ,
+  HomeFinalCTA,
+  HomeHowItWorks,
+  HomePromises,
+  HomeServices,
+  HomeTesting,
+  HomeWhatYouProvide,
+} from "@/components/home/HomeSections";
 import { getShowcaseBuilds } from "@/lib/showcase-builds";
 import site from "../../content/site.json";
 
@@ -18,7 +27,7 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center">
             <div className="order-2 lg:order-1">
               <p className="text-brand-600 font-semibold text-xs sm:text-sm mb-4 tracking-[0.25em] uppercase">
-                Custom PC Building
+                Custom PC Building · Canada
               </p>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-4 text-neutral-950">
                 {site.tagline}
@@ -28,18 +37,21 @@ export default async function HomePage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Link
-                  href="/signup"
+                  href="/build"
                   className="text-center px-6 py-3.5 bg-brand-600 hover:bg-brand-500 text-white font-semibold rounded-xl transition-colors shadow-sm"
                 >
-                  Get Your Custom PC
+                  Build My PC
                 </Link>
                 <Link
-                  href="/login"
+                  href="#how-it-works"
                   className="text-center px-6 py-3.5 border-2 border-neutral-950 hover:bg-neutral-950 hover:text-white text-neutral-950 font-semibold rounded-xl transition-colors"
                 >
-                  Log in
+                  How it works
                 </Link>
               </div>
+              <p className="text-neutral-500 text-sm mt-4">
+                No account required to start — tell us what you need first.
+              </p>
             </div>
             <div className="order-1 lg:order-2">
               <div className="relative h-56 sm:h-72 lg:h-80 rounded-2xl overflow-hidden border border-border bg-white shadow-sm">
@@ -57,55 +69,15 @@ export default async function HomePage() {
         </div>
       </section>
 
+      <HomePromises />
+      <HomeHowItWorks />
+      <HomeServices />
       <BuildGallery builds={builds} />
-
-      <section className="py-12 sm:py-16 px-4 sm:px-6 border-t border-border bg-neutral-950 text-white">
-        <div className="max-w-2xl mx-auto text-center">
-          <p className="text-brand-400 font-semibold text-xs tracking-[0.25em] uppercase mb-3">
-            Get Started
-          </p>
-          <h2 className="text-xl sm:text-2xl font-bold mb-3">Ready to build something great?</h2>
-          <p className="text-neutral-300 mb-6 text-sm sm:text-base">
-            Create a free account, tell us what you need, and we&apos;ll take it from there.
-          </p>
-          <Link
-            href="/signup"
-            className="inline-block w-full sm:w-auto px-8 py-3.5 bg-brand-600 hover:bg-brand-500 text-white font-semibold rounded-xl transition-colors"
-          >
-            Sign Up
-          </Link>
-        </div>
-      </section>
-
-      <footer className="border-t border-border py-10 sm:py-12 px-4 bg-white">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
-          <BrandLogo imageClassName="w-64 sm:w-80 h-auto max-h-24 sm:max-h-28" />
-          <div className="text-neutral-500 text-sm text-center sm:text-right space-y-1.5">
-            <p>
-              &copy; {new Date().getFullYear()} {site.siteName}
-            </p>
-            <p className="flex flex-wrap items-center justify-center sm:justify-end gap-x-3 gap-y-1">
-              <a
-                href={`mailto:${site.contactEmail}`}
-                className="hover:text-brand-600 transition-colors"
-              >
-                {site.contactEmail}
-              </a>
-              <span className="text-neutral-300 hidden sm:inline" aria-hidden="true">
-                |
-              </span>
-              <a
-                href={site.youtubeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-brand-600 transition-colors"
-              >
-                YouTube
-              </a>
-            </p>
-          </div>
-        </div>
-      </footer>
+      <HomeWhatYouProvide />
+      <HomeTesting />
+      <HomeFAQ />
+      <HomeFinalCTA />
+      <SiteFooter />
     </>
   );
 }

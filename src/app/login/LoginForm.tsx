@@ -43,7 +43,7 @@ export default function LoginForm() {
 
       if (role === "builder") {
         await supabase.auth.signOut();
-        setError("Please use the Admin portal below to sign in.");
+        setError("This account cannot sign in here. Use the correct login for your account type.");
         setLoading(false);
         return;
       }
@@ -109,20 +109,11 @@ export default function LoginForm() {
             </form>
 
             <p className="text-center text-sm text-neutral-500 mt-6">
-              Don&apos;t have an account?{" "}
-              <Link href="/signup" className="text-brand-600 font-semibold hover:text-brand-500">
-                Sign up
+              Don&apos;t have a build yet?{" "}
+              <Link href="/build" className="text-brand-600 font-semibold hover:text-brand-500">
+                Start Build My PC
               </Link>
             </p>
-
-            <div className="mt-6 pt-6 border-t border-border">
-              <Link
-                href="/admin/login"
-                className="block w-full text-center py-2.5 border border-border rounded-lg text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
-              >
-                Admin portal
-              </Link>
-            </div>
           </div>
         </div>
       </div>

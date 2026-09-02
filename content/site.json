@@ -1,8 +1,108 @@
 {
   "siteName": "NO BS COMPUTERS",
   "tagline": "No BS, just computers built for what you actually need.",
-  "intro": "We are NoBS Computers. We build custom PCs with honest recommendations and clean assembly. No upsells, no gimmicks — just solid machines.",
-  "contactEmail": "flappyasdfghjkl@gmail.com",
+  "intro": "We are NoBS Computers — a custom PC builder focused on honest recommendations, clean assembly, and machines that match how you actually use a computer.",
+  "contactEmail": "hello@nobscomputers.ca",
   "youtubeUrl": "https://www.youtube.com/@nobscomputers",
-  "heroImage": "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=1200&q=80"
+  "heroImage": "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=1200&q=80",
+  "promises": [
+    {
+      "title": "Transparent parts",
+      "description": "You see what goes into your build and why. No mystery components, no vague specs — just a clear parts list matched to your budget and use case."
+    },
+    {
+      "title": "No unnecessary upsells",
+      "description": "We recommend what you need, not what pads a invoice. If a part doesn't help your build, we won't push it."
+    },
+    {
+      "title": "Tested before handoff",
+      "description": "Every system is assembled carefully, stress-tested, and checked before you receive it. You shouldn't have to troubleshoot a brand-new PC."
+    }
+  ],
+  "howItWorks": [
+    {
+      "step": "1",
+      "title": "Tell us what you need",
+      "description": "Fill out a short questionnaire — use case, budget, parts you already own, and any preferences. No account required to start."
+    },
+    {
+      "step": "2",
+      "title": "We review & chat",
+      "description": "We look over your request, discuss options in live chat, and answer questions before anything is approved."
+    },
+    {
+      "step": "3",
+      "title": "Build, test & deliver",
+      "description": "Once approved, we source parts, build your PC, run tests, and keep you updated until it's ready."
+    }
+  ],
+  "services": [
+    {
+      "title": "Gaming PCs",
+      "description": "High-FPS rigs tuned for the games you play — from 1080p value builds to high-refresh 1440p and beyond."
+    },
+    {
+      "title": "Work & productivity",
+      "description": "Quiet, reliable systems for office work, school, programming, and everyday multitasking."
+    },
+    {
+      "title": "Content creation",
+      "description": "Editing, streaming, and creative workloads with the right CPU, GPU, RAM, and storage balance."
+    },
+    {
+      "title": "Upgrades & reuse",
+      "description": "Already have a case, SSD, or GPU? Tell us what you own and we'll build around it when it makes sense."
+    }
+  ],
+  "whatYouProvide": [
+    "What you'll use the PC for (gaming, work, editing, etc.)",
+    "Your target budget in CAD",
+    "Parts you already own — monitor, SSD, GPU, case, etc.",
+    "Preferences — quiet fans, RGB, compact size, specific games or apps",
+    "Any must-haves or deal-breakers"
+  ],
+  "testingSteps": [
+    {
+      "title": "Assembly check",
+      "description": "Clean cable management, secure mounting, and proper thermal paste application."
+    },
+    {
+      "title": "POST & BIOS",
+      "description": "Power-on self-test, memory detection, and firmware settings verified."
+    },
+    {
+      "title": "Stress testing",
+      "description": "CPU and GPU run under load to catch instability before the PC leaves the bench."
+    },
+    {
+      "title": "Final inspection",
+      "description": "Ports, Wi-Fi, audio, and storage checked so the system is ready to use out of the box."
+    }
+  ],
+  "faq": [
+    {
+      "question": "Do I need an account to request a build?",
+      "answer": "No. Start with the Build My PC questionnaire and tell us what you need first. We'll ask you to create a password afterward so you can track your build and chat with us."
+    },
+    {
+      "question": "How long does a custom build take?",
+      "answer": "Timeline depends on parts availability and current queue. We'll give you a realistic estimate after reviewing your request — usually discussed in chat once we've looked at your specs."
+    },
+    {
+      "question": "Can I use parts I already own?",
+      "answer": "Often, yes. List what you have in the questionnaire — monitor, storage, GPU, case, etc. We'll tell you honestly if reusing something makes sense or if newer parts are a better fit."
+    },
+    {
+      "question": "Do you mark up parts?",
+      "answer": "We're upfront about pricing. You'll get a clear quote with transparent parts — no hidden fees or surprise upsells for things you don't need."
+    },
+    {
+      "question": "What if something goes wrong after delivery?",
+      "answer": "Reach out through your build dashboard chat. If there's a delivery issue, you can report it from your account and we'll follow up."
+    },
+    {
+      "question": "Do you ship or is pickup available?",
+      "answer": "Details depend on your location — we'll confirm delivery or pickup options when we review your request."
+    }
+  ]
 }
