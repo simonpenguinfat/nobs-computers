@@ -24,7 +24,7 @@ export default async function HomePage() {
                 {site.tagline}
               </h1>
               <p className="text-neutral-600 text-base sm:text-lg mb-8 leading-relaxed">
-                Hi, I&apos;m {site.builderName}. {site.builderBio}
+                {site.intro}
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Link
@@ -78,11 +78,32 @@ export default async function HomePage() {
       </section>
 
       <footer className="border-t border-border py-10 sm:py-12 px-4 bg-white">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
           <BrandLogo imageClassName="w-64 sm:w-80 h-auto max-h-24 sm:max-h-28" />
-          <p className="text-neutral-500 text-sm text-center sm:text-right">
-            &copy; {new Date().getFullYear()} {site.siteName} &mdash; {site.contactEmail}
-          </p>
+          <div className="text-neutral-500 text-sm text-center sm:text-right space-y-1.5">
+            <p>
+              &copy; {new Date().getFullYear()} {site.siteName}
+            </p>
+            <p className="flex flex-wrap items-center justify-center sm:justify-end gap-x-3 gap-y-1">
+              <a
+                href={`mailto:${site.contactEmail}`}
+                className="hover:text-brand-600 transition-colors"
+              >
+                {site.contactEmail}
+              </a>
+              <span className="text-neutral-300 hidden sm:inline" aria-hidden="true">
+                |
+              </span>
+              <a
+                href={site.youtubeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-brand-600 transition-colors"
+              >
+                YouTube
+              </a>
+            </p>
+          </div>
         </div>
       </footer>
     </>

@@ -1,8 +1,8 @@
 {
   "siteName": "NO BS COMPUTERS",
   "tagline": "No BS, just computers built for what you actually need.",
-  "builderName": "Simon Xu",
-  "builderBio": "I build custom PCs with honest recommendations and clean assembly. No upsells, no gimmicks — just solid machines.",
+  "intro": "We are NoBS Computers. We build custom PCs with honest recommendations and clean assembly. No upsells, no gimmicks — just solid machines.",
   "contactEmail": "flappyasdfghjkl@gmail.com",
+  "youtubeUrl": "https://www.youtube.com/@nobscomputers",
   "heroImage": "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=1200&q=80"
 }
