@@ -11,7 +11,7 @@ interface BrandLogoProps {
 export default function BrandLogo({
   href = "/",
   className = "",
-  imageClassName = "h-20 sm:h-22 w-auto",
+  imageClassName = "h-16 sm:h-20 w-auto",
 }: BrandLogoProps) {
   const content = (
     <Image

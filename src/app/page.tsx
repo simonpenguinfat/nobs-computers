@@ -41,10 +41,7 @@ export default async function HomePage() {
                 </Link>
               </div>
             </div>
-            <div className="order-1 lg:order-2 space-y-6">
-              <div className="flex justify-center lg:justify-end">
-                <BrandLogo href="/" imageClassName="h-16 sm:h-20 w-auto" />
-              </div>
+            <div className="order-1 lg:order-2">
               <div className="relative h-56 sm:h-72 lg:h-80 rounded-2xl overflow-hidden border border-border bg-white shadow-sm">
                 <Image
                   src={site.heroImage}
@@ -80,9 +77,9 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <footer className="border-t border-border py-8 px-4 bg-white">
+      <footer className="border-t border-border py-10 sm:py-12 px-4 bg-white">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <BrandLogo imageClassName="h-22 w-auto" />
+          <BrandLogo imageClassName="h-24 sm:h-32 w-auto" />
           <p className="text-neutral-500 text-sm text-center sm:text-right">
             &copy; {new Date().getFullYear()} {site.siteName} &mdash; {site.contactEmail}
           </p>
