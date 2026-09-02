@@ -1,4 +1,4 @@
-import { BUILD_STATUSES } from "@/lib/types";
+import { BUILD_STATUSES, isArchivedStatus } from "@/lib/types";
 import type { BuildRequest } from "@/lib/types";
 import DeliveryConfirmation from "@/components/DeliveryConfirmation";
 import BuyerOrderActions from "@/components/BuyerOrderActions";
@@ -9,7 +9,7 @@ interface BuildStatusCardProps {
 }
 
 export default function BuildStatusCard({ request, onRequestUpdated }: BuildStatusCardProps) {
-  if (!request) {
+  if (!request || isArchivedStatus(request.status)) {
     return (
       <div className="bg-surface-card border border-border rounded-xl p-6 text-center">
         <div className="w-12 h-12 rounded-full bg-surface-light flex items-center justify-center mx-auto mb-3 border border-border">

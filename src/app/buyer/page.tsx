@@ -42,7 +42,9 @@ export default async function BuyerPage() {
         </div>
         <BuyerDashboardClient
           userId={user.id}
-          userName={profile?.full_name ?? "Guest"}
+          userName={profile?.full_name ?? user.user_metadata?.full_name ?? "Guest"}
+          userEmail={user.email ?? profile?.email ?? ""}
+          memberSince={profile?.created_at ?? user.created_at}
           initialRequest={(buildRequest as BuildRequest) ?? null}
         />
       </div>

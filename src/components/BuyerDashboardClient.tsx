@@ -2,63 +2,96 @@
 
 import { useState } from "react";
 import type { BuildRequest } from "@/lib/types";
+import { isArchivedStatus } from "@/lib/types";
 import BuyerSurvey from "./BuyerSurvey";
 import BuildStatusCard from "./BuildStatusCard";
+import BuyerSettings from "./BuyerSettings";
 import ChatBox from "./ChatBox";
 
 interface BuyerDashboardProps {
   userId: string;
   userName: string;
+  userEmail: string;
+  memberSince: string;
   initialRequest: BuildRequest | null;
 }
 
-type MobileTab = "survey" | "status";
+type MobileTab = "survey" | "status" | "settings";
+
+function normalizeRequest(request: BuildRequest | null): BuildRequest | null {
+  if (!request || isArchivedStatus(request.status)) {
+    return null;
+  }
+  return request;
+}
 
 export default function BuyerDashboardClient({
   userId,
-  userName,
+  userName: initialUserName,
+  userEmail,
+  memberSince,
   initialRequest,
 }: BuyerDashboardProps) {
-  const [request, setRequest] = useState<BuildRequest | null>(initialRequest);
+  const [request, setRequest] = useState<BuildRequest | null>(
+    normalizeRequest(initialRequest)
+  );
+  const [userName, setUserName] = useState(initialUserName);
   const [mobileTab, setMobileTab] = useState<MobileTab>(
-    initialRequest ? "status" : "survey"
+    initialRequest && !isArchivedStatus(initialRequest.status) ? "status" : "survey"
   );
 
   function handleRequestUpdated(updated: BuildRequest | null) {
-    setRequest(updated);
-    if (!updated) {
+    setRequest(normalizeRequest(updated));
+    if (!updated || isArchivedStatus(updated.status)) {
       setMobileTab("survey");
     }
   }
 
   function handleRequestSubmitted(newRequest: BuildRequest) {
-    setRequest(newRequest);
-    setMobileTab("status");
+    const active = normalizeRequest(newRequest);
+    setRequest(active);
+    if (active) {
+      setMobileTab("status");
+    }
   }
+
+  const tabClass = (tab: MobileTab) =>
+    `flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${
+      mobileTab === tab
+        ? "bg-white text-neutral-900 shadow-sm"
+        : "text-neutral-500"
+    }`;
+
+  const settingsPanel = (
+    <BuyerSettings
+      userId={userId}
+      email={userEmail}
+      fullName={userName}
+      memberSince={memberSince}
+      onNameUpdated={setUserName}
+    />
+  );
 
   return (
     <div className="space-y-4">
       <div className="flex lg:hidden border border-border rounded-lg p-1 bg-surface-light">
-        <button
-          onClick={() => setMobileTab("survey")}
-          className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${
-            mobileTab === "survey"
-              ? "bg-white text-neutral-900 shadow-sm"
-              : "text-neutral-500"
-          }`}
-        >
-          Your Request
+        <button type="button" onClick={() => setMobileTab("survey")} className={tabClass("survey")}>
+          Request
+        </button>
+        <button type="button" onClick={() => setMobileTab("status")} className={tabClass("status")}>
+          Status
         </button>
         <button
-          onClick={() => setMobileTab("status")}
-          className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${
-            mobileTab === "status"
-              ? "bg-white text-neutral-900 shadow-sm"
-              : "text-neutral-500"
-          }`}
+          type="button"
+          onClick={() => setMobileTab("settings")}
+          className={tabClass("settings")}
         >
-          Status & Chat
+          Settings
         </button>
+      </div>
+
+      <div className={`lg:hidden ${mobileTab !== "settings" ? "hidden" : ""}`}>
+        {settingsPanel}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
@@ -78,6 +111,7 @@ export default function BuyerDashboardClient({
 
           {request ? (
             <ChatBox
+              key={request.id}
               buildRequestId={request.id}
               userId={userId}
               userName={userName}
@@ -91,6 +125,8 @@ export default function BuyerDashboardClient({
           )}
         </div>
       </div>
+
+      <div className="hidden lg:block max-w-md">{settingsPanel}</div>
     </div>
   );
 }

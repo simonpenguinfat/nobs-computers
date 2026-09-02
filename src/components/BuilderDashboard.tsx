@@ -27,6 +27,7 @@ export default function BuilderDashboard({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DetailTab>("build");
   const [updating, setUpdating] = useState(false);
+  const [actionError, setActionError] = useState("");
   const supabase = useMemo(() => createClient(), []);
 
   const selected = clients.find((c) => c.id === selectedId) ?? null;
@@ -48,40 +49,82 @@ export default function BuilderDashboard({
     setActiveTab("build");
   }
 
+  function formatStatusError(message: string): string {
+    const lower = message.toLowerCase();
+
+    if (lower.includes("check constraint") || lower.includes("rejected")) {
+      return "Decline failed — run fix-decline-order.sql in Supabase SQL Editor, then try again.";
+    }
+
+    if (lower.includes("permission denied") || lower.includes("row-level security")) {
+      return "Permission denied. Make sure your account has the builder role in Supabase.";
+    }
+
+    return message;
+  }
+
   async function updateStatus(
     requestId: string,
-    status: BuildRequest["status"]
-  ) {
+    status: BuildRequest["status"],
+    options?: { onlyFromStatus?: BuildRequest["status"] }
+  ): Promise<boolean> {
     setUpdating(true);
-    const { data } = await supabase
+    setActionError("");
+
+    let query = supabase
       .from("build_requests")
       .update({ status, updated_at: new Date().toISOString() })
-      .eq("id", requestId)
-      .select("*, profiles!buyer_id(*)")
-      .single();
+      .eq("id", requestId);
 
-    if (data) {
-      if (isArchivedStatus(status)) {
-        removeClient(requestId);
-      } else {
-        setClients((prev) =>
-          prev.map((c) => (c.id === requestId ? (data as ClientWithProfile) : c))
-        );
-      }
+    if (options?.onlyFromStatus) {
+      query = query.eq("status", options.onlyFromStatus);
     }
+
+    const { data, error } = await query.select("*").maybeSingle();
+
+    if (error) {
+      setActionError(formatStatusError(error.message));
+      setUpdating(false);
+      return false;
+    }
+
+    if (!data) {
+      setActionError(
+        "Could not update this order. It may have already changed — refresh the page."
+      );
+      setUpdating(false);
+      return false;
+    }
+
+    if (isArchivedStatus(status)) {
+      removeClient(requestId);
+    } else {
+      setClients((prev) =>
+        prev.map((c) => {
+          if (c.id !== requestId) return c;
+          return { ...c, ...(data as BuildRequest) };
+        })
+      );
+    }
+
     setUpdating(false);
+    return true;
   }
 
   async function acceptOrder(requestId: string) {
-    await updateStatus(requestId, "in_progress");
-    setActiveTab("build");
+    const ok = await updateStatus(requestId, "in_progress", {
+      onlyFromStatus: "pending",
+    });
+    if (ok) {
+      setActiveTab("build");
+    }
   }
 
   async function declineOrder(requestId: string) {
     if (!confirm("Decline this order? It will be removed from your dashboard.")) {
       return;
     }
-    await updateStatus(requestId, "rejected");
+    await updateStatus(requestId, "rejected", { onlyFromStatus: "pending" });
   }
 
   async function cancelOrder(requestId: string) {
@@ -256,6 +299,9 @@ export default function BuilderDashboard({
                             <strong>Review this order.</strong> Chat with the customer first,
                             then accept or decline.
                           </p>
+                          {actionError && (
+                            <p className="text-sm text-red-700">{actionError}</p>
+                          )}
                           <div className="flex flex-col sm:flex-row gap-3">
                             <button
                               type="button"
