@@ -27,7 +27,7 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center">
             <div className="order-2 lg:order-1">
               <p className="text-brand-600 font-semibold text-xs sm:text-sm mb-4 tracking-[0.25em] uppercase">
-                Custom PC Building · Canada
+                Custom PC Building · Vancouver
               </p>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-4 text-neutral-950">
                 {site.tagline}
