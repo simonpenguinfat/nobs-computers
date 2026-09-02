@@ -55,7 +55,7 @@ export default function AdminLoginForm() {
     <div className="min-h-screen bg-neutral-50 flex flex-col">
       <header className="border-b border-border bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <BrandLogo href="/" />
+          <BrandLogo href="/" imageClassName="w-44 sm:w-56 h-auto max-h-14" />
           <span className="text-xs text-brand-600 font-semibold uppercase tracking-[0.2em]">
             Admin
           </span>

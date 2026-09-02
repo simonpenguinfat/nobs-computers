@@ -11,14 +11,14 @@ interface BrandLogoProps {
 export default function BrandLogo({
   href = "/",
   className = "",
-  imageClassName = "h-16 sm:h-20 w-auto",
+  imageClassName = "w-44 sm:w-56 h-auto max-h-14 sm:max-h-16",
 }: BrandLogoProps) {
   const content = (
     <Image
       src="/logo.png"
       alt={site.siteName}
-      width={320}
-      height={80}
+      width={480}
+      height={120}
       priority
       className={imageClassName}
     />

@@ -37,7 +37,7 @@ export default async function AdminPage() {
       <header className="border-b border-border bg-white sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
           <div className="min-w-0 flex items-center gap-3">
-            <BrandLogo href="/" imageClassName="h-8 w-auto hidden sm:block" />
+          <BrandLogo href="/" imageClassName="w-40 sm:w-52 h-auto max-h-12 hidden sm:block" />
             <div>
               <p className="font-semibold text-neutral-950 truncate sm:hidden">{site.siteName}</p>
               <p className="text-xs text-brand-600 font-semibold tracking-[0.2em] uppercase">

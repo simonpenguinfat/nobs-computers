@@ -11,7 +11,7 @@ export default function Navbar({ user, loading }: NavbarProps) {
   return (
     <nav className="border-b border-border bg-white/95 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-20 sm:h-24 flex items-center justify-between gap-3">
-        <BrandLogo imageClassName="h-16 sm:h-20 w-auto" />
+        <BrandLogo imageClassName="w-48 sm:w-64 h-auto max-h-16 sm:max-h-[4.5rem]" />
 
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           {loading ? (

@@ -79,7 +79,7 @@ export default async function HomePage() {
 
       <footer className="border-t border-border py-10 sm:py-12 px-4 bg-white">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <BrandLogo imageClassName="h-24 sm:h-32 w-auto" />
+          <BrandLogo imageClassName="w-64 sm:w-80 h-auto max-h-24 sm:max-h-28" />
           <p className="text-neutral-500 text-sm text-center sm:text-right">
             &copy; {new Date().getFullYear()} {site.siteName} &mdash; {site.contactEmail}
           </p>
