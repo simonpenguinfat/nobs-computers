@@ -36,6 +36,29 @@ export const PART_CATEGORIES = [
 
 export type PartCategory = (typeof PART_CATEGORIES)[number];
 
+export const OWNABLE_PART_CATEGORIES = PART_CATEGORIES.filter(
+  (category) => category !== "Other"
+);
+
+export const PART_CATEGORY_SHORT: Record<string, string> = {
+  CPU: "CPU",
+  GPU: "GPU",
+  RAM: "RAM",
+  SSD: "SSD",
+  PSU: "PSU",
+  Motherboard: "Mobo",
+  Case: "Case",
+  Fans: "Fans",
+  "CPU Cooling": "Cooler",
+  Other: "Other",
+};
+
+export function partCategoryLabel(category: string): string {
+  return PART_CATEGORY_SHORT[category] ?? category;
+}
+
+export const NONE_PART = "None";
+
 export interface BuildQuotePart {
   id: string;
   category: string;

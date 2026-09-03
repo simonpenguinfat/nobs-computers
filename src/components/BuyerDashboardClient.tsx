@@ -18,7 +18,7 @@ interface BuyerDashboardProps {
   initialRequest: BuildRequest | null;
 }
 
-type MobileTab = "survey" | "status" | "settings";
+type DetailTab = "build" | "chat" | "settings";
 
 function normalizeRequest(request: BuildRequest | null): BuildRequest | null {
   if (!request || isArchivedStatus(request.status)) {
@@ -38,14 +38,12 @@ export default function BuyerDashboardClient({
     normalizeRequest(initialRequest)
   );
   const [userName, setUserName] = useState(initialUserName);
-  const [mobileTab, setMobileTab] = useState<MobileTab>(
-    initialRequest && !isArchivedStatus(initialRequest.status) ? "status" : "survey"
-  );
+  const [activeTab, setActiveTab] = useState<DetailTab>("build");
 
   function handleRequestUpdated(updated: BuildRequest | null) {
     setRequest(normalizeRequest(updated));
     if (!updated || isArchivedStatus(updated.status)) {
-      setMobileTab("survey");
+      setActiveTab("build");
     }
   }
 
@@ -53,85 +51,99 @@ export default function BuyerDashboardClient({
     const active = normalizeRequest(newRequest);
     setRequest(active);
     if (active) {
-      setMobileTab("status");
+      setActiveTab("build");
     }
   }
 
-  const tabClass = (tab: MobileTab) =>
-    `flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${
-      mobileTab === tab
-        ? "bg-white text-neutral-900 shadow-sm"
-        : "text-neutral-500"
+  const tabClass = (tab: DetailTab) =>
+    `px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
+      activeTab === tab
+        ? "bg-neutral-50 text-neutral-900 border-b-2 border-neutral-900"
+        : "text-neutral-500 hover:text-neutral-700"
     }`;
-
-  const settingsPanel = (
-    <BuyerSettings
-      userId={userId}
-      email={userEmail}
-      fullName={userName}
-      memberSince={memberSince}
-      onNameUpdated={setUserName}
-    />
-  );
 
   return (
     <div className="space-y-4">
       <PendingDraftSubmit />
-      <div className="flex lg:hidden border border-border rounded-lg p-1 bg-surface-light">
-        <button type="button" onClick={() => setMobileTab("survey")} className={tabClass("survey")}>
-          Request
-        </button>
-        <button type="button" onClick={() => setMobileTab("status")} className={tabClass("status")}>
-          Status
-        </button>
-        <button
-          type="button"
-          onClick={() => setMobileTab("settings")}
-          className={tabClass("settings")}
-        >
-          Settings
-        </button>
-      </div>
 
-      <div className={`lg:hidden ${mobileTab !== "settings" ? "hidden" : ""}`}>
-        {settingsPanel}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <div className={`space-y-6 ${mobileTab !== "survey" ? "hidden lg:block" : ""}`}>
-          <div className="bg-surface-card border border-border rounded-xl p-5 sm:p-6">
-            <h2 className="font-semibold mb-4 text-neutral-900">Tell Us What You Need</h2>
-            <BuyerSurvey
-              userId={userId}
-              existingRequest={request}
-              onSubmitted={handleRequestSubmitted}
-            />
+      <div className="bg-surface-card border border-border rounded-xl">
+        <div className="px-4 sm:px-5 pt-5 pb-0 border-b border-border bg-white rounded-t-xl">
+          <div className="flex gap-1 overflow-x-auto">
+            <button
+              type="button"
+              onClick={() => setActiveTab("build")}
+              className={tabClass("build")}
+            >
+              Build Details
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("chat")}
+              className={tabClass("chat")}
+            >
+              Chat
+              {request?.status === "pending" && (
+                <span className="ml-1.5 text-amber-600">●</span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("settings")}
+              className={tabClass("settings")}
+            >
+              Settings
+            </button>
           </div>
         </div>
 
-        <div className={`space-y-4 sm:space-y-6 ${mobileTab !== "status" ? "hidden lg:block" : ""}`}>
-          <BuildStatusCard request={request} onRequestUpdated={handleRequestUpdated} />
-
-          {request && <BuyerBuildQuotes buildRequestId={request.id} />}
-
-          {request ? (
-            <ChatBox
-              key={request.id}
-              buildRequestId={request.id}
-              userId={userId}
-              userName={userName}
-            />
-          ) : (
-            <div className="bg-surface-card border border-border rounded-xl p-6 text-center">
-              <p className="text-neutral-500 text-sm">
-                Submit your request first to unlock chat with your builder.
-              </p>
+        <div className="p-4 sm:p-5 bg-white rounded-b-xl overflow-visible">
+          {activeTab === "build" && (
+            <div className="space-y-4 sm:space-y-6">
+              <div>
+                <h3 className="font-semibold mb-4 text-neutral-900">
+                  Tell Us What You Need
+                </h3>
+                <BuyerSurvey
+                  userId={userId}
+                  existingRequest={request}
+                  onSubmitted={handleRequestSubmitted}
+                />
+              </div>
+              <BuildStatusCard
+                request={request}
+                onRequestUpdated={handleRequestUpdated}
+              />
+              {request && <BuyerBuildQuotes buildRequestId={request.id} />}
             </div>
+          )}
+
+          {activeTab === "chat" &&
+            (request ? (
+              <ChatBox
+                key={request.id}
+                buildRequestId={request.id}
+                userId={userId}
+                userName={userName}
+              />
+            ) : (
+              <div className="py-8 text-center">
+                <p className="text-neutral-500 text-sm">
+                  Submit your request first to unlock chat with your builder.
+                </p>
+              </div>
+            ))}
+
+          {activeTab === "settings" && (
+            <BuyerSettings
+              userId={userId}
+              email={userEmail}
+              fullName={userName}
+              memberSince={memberSince}
+              onNameUpdated={setUserName}
+            />
           )}
         </div>
       </div>
-
-      <div className="hidden lg:block max-w-md">{settingsPanel}</div>
     </div>
   );
 }

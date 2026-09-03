@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { PART_CATEGORIES, type BuildQuote, type BuildQuotePart } from "@/lib/types";
+import { PART_CATEGORIES, partCategoryLabel, type BuildQuote, type BuildQuotePart } from "@/lib/types";
 import {
   defaultPartsList,
   emptyPart,
@@ -263,11 +263,12 @@ export default function BuildQuoteEditor({
                     onChange={(e) =>
                       updatePart(quote.id, part.id, { category: e.target.value })
                     }
-                    className="sm:col-span-2 bg-white border border-border rounded-lg px-2 py-2 text-sm"
+                    className="sm:col-span-2 min-w-0 bg-white border border-border rounded-lg px-2 py-2 text-sm"
+                    title={part.category}
                   >
                     {PART_CATEGORIES.map((category) => (
                       <option key={category} value={category}>
-                        {category}
+                        {partCategoryLabel(category)}
                       </option>
                     ))}
                   </select>

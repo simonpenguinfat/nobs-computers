@@ -54,7 +54,7 @@ export default function BuyerSettings({
   }
 
   return (
-    <div className="bg-surface-card border border-border rounded-xl p-5 sm:p-6 space-y-6">
+    <div className="space-y-6">
       <div>
         <h2 className="font-semibold text-neutral-900">Account Settings</h2>
         <p className="text-sm text-neutral-500 mt-1">

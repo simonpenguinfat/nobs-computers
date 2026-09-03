@@ -6,6 +6,7 @@ import { BUILD_STATUSES, isArchivedStatus } from "@/lib/types";
 import type { BuildRequest, Profile } from "@/lib/types";
 import ChatBox from "./ChatBox";
 import BuildQuoteEditor from "./BuildQuoteEditor";
+import OwnedPartsSummary from "./OwnedPartsSummary";
 
 interface ClientWithProfile extends BuildRequest {
   profiles: Profile;
@@ -71,6 +72,12 @@ export default function BuilderDashboard({
   ): Promise<boolean> {
     setUpdating(true);
     setActionError("");
+
+    if (status === "not_received") {
+      setActionError("Only the customer can mark a build as not received.");
+      setUpdating(false);
+      return false;
+    }
 
     let query = supabase
       .from("build_requests")
@@ -317,18 +324,16 @@ export default function BuilderDashboard({
                             ${selected.budget?.toLocaleString()}
                           </p>
                         </div>
-                        <div>
-                          <p className="text-xs text-neutral-500">Existing Parts</p>
-                          <p className="text-sm text-neutral-900">
-                            {selected.existing_parts || "None"}
-                          </p>
-                        </div>
-                        <div>
+                        <div className="sm:col-span-2">
                           <p className="text-xs text-neutral-500">Preferences</p>
                           <p className="text-sm text-neutral-900">
                             {selected.preferences || "None"}
                           </p>
                         </div>
+                      </div>
+
+                      <div className="mb-4">
+                        <OwnedPartsSummary raw={selected.existing_parts} />
                       </div>
 
                       {selected.status === "pending" && (
@@ -405,10 +410,15 @@ export default function BuilderDashboard({
                               className="w-full sm:w-auto bg-white border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-neutral-400"
                             >
                               {Object.entries(BUILD_STATUSES)
-                                .filter(
-                                  ([key]) =>
-                                    !["confirmed", "rejected", "pending"].includes(key)
-                                )
+                                .filter(([key]) => {
+                                  if (["confirmed", "rejected", "pending"].includes(key)) {
+                                    return false;
+                                  }
+                                  if (key === "not_received") {
+                                    return selected.status === "not_received";
+                                  }
+                                  return true;
+                                })
                                 .map(([key, val]) => (
                                   <option key={key} value={key}>
                                     {val.label}

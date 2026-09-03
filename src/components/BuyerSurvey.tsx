@@ -4,6 +4,11 @@ import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { USE_CASES } from "@/lib/types";
 import type { BuildRequest } from "@/lib/types";
+import ExistingPartsPicker from "@/components/ExistingPartsPicker";
+import {
+  parseOwnedParts,
+  serializeOwnedParts,
+} from "@/lib/owned-parts";
 
 interface BuyerSurveyProps {
   userId: string;
@@ -16,11 +21,11 @@ export default function BuyerSurvey({
   existingRequest,
   onSubmitted,
 }: BuyerSurveyProps) {
+  const parsedParts = parseOwnedParts(existingRequest?.existing_parts ?? "");
   const [useCase, setUseCase] = useState(existingRequest?.use_case ?? "");
   const [budget, setBudget] = useState(existingRequest?.budget?.toString() ?? "");
-  const [existingParts, setExistingParts] = useState(
-    existingRequest?.existing_parts ?? ""
-  );
+  const [ownedParts, setOwnedParts] = useState(parsedParts.selection);
+  const [legacyParts] = useState(parsedParts.legacy);
   const [preferences, setPreferences] = useState(
     existingRequest?.preferences ?? ""
   );
@@ -47,7 +52,7 @@ export default function BuyerSurvey({
     const payload = {
       use_case: useCase,
       budget: parseFloat(budget) || 0,
-      existing_parts: existingParts,
+      existing_parts: serializeOwnedParts(ownedParts),
       preferences,
       updated_at: new Date().toISOString(),
     };
@@ -120,18 +125,12 @@ export default function BuyerSurvey({
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-1.5 text-neutral-700">
-          Parts you already own (if any)
-        </label>
-        <textarea
-          value={existingParts}
-          onChange={(e) => setExistingParts(e.target.value)}
-          placeholder="e.g. I have a monitor and an old SSD I want to reuse..."
-          rows={3}
-          className="w-full bg-surface-light border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 resize-none"
-        />
-      </div>
+      <ExistingPartsPicker value={ownedParts} onChange={setOwnedParts} />
+      {legacyParts ? (
+        <p className="text-xs text-neutral-500 -mt-2">
+          Previously entered: {legacyParts}
+        </p>
+      ) : null}
 
       <div>
         <label className="block text-sm font-medium mb-1.5 text-neutral-700">

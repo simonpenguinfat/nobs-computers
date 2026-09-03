@@ -1,5 +1,5 @@
 import { formatCad, safePartUrl, quoteTotal, visibleParts } from "@/lib/build-quotes";
-import type { BuildQuote, BuildQuotePart } from "@/lib/types";
+import { partCategoryLabel, type BuildQuote, type BuildQuotePart } from "@/lib/types";
 
 function PriceCell({ part }: { part: BuildQuotePart }) {
   const href = safePartUrl(part.url);
@@ -49,7 +49,7 @@ export default function BuildQuotePartsList({
           {parts.map((part) => (
             <tr key={part.id} className="border-b border-border last:border-0">
               <td className="py-2.5 pr-3 text-neutral-500 whitespace-nowrap align-top">
-                {part.category}
+                {partCategoryLabel(part.category)}
               </td>
               <td className="py-2.5 pr-3 text-neutral-900 align-top">
                 {part.name || "—"}

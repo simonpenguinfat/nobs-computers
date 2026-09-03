@@ -2,6 +2,7 @@ import { BUILD_STATUSES, isArchivedStatus } from "@/lib/types";
 import type { BuildRequest } from "@/lib/types";
 import DeliveryConfirmation from "@/components/DeliveryConfirmation";
 import BuyerOrderActions from "@/components/BuyerOrderActions";
+import OwnedPartsSummary from "@/components/OwnedPartsSummary";
 
 interface BuildStatusCardProps {
   request: BuildRequest | null;
@@ -62,10 +63,7 @@ export default function BuildStatusCard({ request, onRequestUpdated }: BuildStat
       </div>
 
       {request.existing_parts && (
-        <div>
-          <p className="text-xs text-neutral-500 mb-0.5">Your Existing Parts</p>
-          <p className="text-sm text-neutral-700">{request.existing_parts}</p>
-        </div>
+        <OwnedPartsSummary raw={request.existing_parts} heading="Your existing parts" />
       )}
 
       {request.status === "not_received" && (

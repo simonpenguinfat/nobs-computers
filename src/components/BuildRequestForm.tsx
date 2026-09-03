@@ -1,6 +1,11 @@
 "use client";
 
 import { USE_CASES } from "@/lib/types";
+import ExistingPartsPicker from "@/components/ExistingPartsPicker";
+import {
+  parseOwnedParts,
+  serializeOwnedParts,
+} from "@/lib/owned-parts";
 
 export type BuildRequestFormValues = {
   useCase: string;
@@ -26,6 +31,8 @@ export default function BuildRequestForm({
   error,
   onSubmit,
 }: BuildRequestFormProps) {
+  const owned = parseOwnedParts(values.existingParts);
+
   return (
     <form onSubmit={onSubmit} className="space-y-5">
       <div>
@@ -63,18 +70,17 @@ export default function BuildRequestForm({
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-1.5 text-neutral-700">
-          Parts you already own (if any)
-        </label>
-        <textarea
-          value={values.existingParts}
-          onChange={(e) => onChange({ ...values, existingParts: e.target.value })}
-          placeholder="e.g. Monitor, SSD, old GPU, case..."
-          rows={3}
-          className="w-full bg-surface-light border border-border rounded-lg px-3 py-2.5 text-sm resize-none"
-        />
-      </div>
+      <ExistingPartsPicker
+        value={owned.selection}
+        onChange={(selection) =>
+          onChange({ ...values, existingParts: serializeOwnedParts(selection) })
+        }
+      />
+      {owned.legacy ? (
+        <p className="text-xs text-neutral-500 -mt-2">
+          Previously entered: {owned.legacy}
+        </p>
+      ) : null}
 
       <div>
         <label className="block text-sm font-medium mb-1.5 text-neutral-700">
