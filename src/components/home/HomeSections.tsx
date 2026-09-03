@@ -9,11 +9,12 @@ function NbMonogram({
 }) {
   return (
     <Image
-      src="/nb-monogram.png"
+      src="/nb-mark.png"
       alt="No BS Computers"
-      width={512}
-      height={512}
-      className={className}
+      width={1024}
+      height={1024}
+      unoptimized
+      className={`bg-transparent ${className}`}
     />
   );
 }
