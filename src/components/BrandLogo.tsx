@@ -17,8 +17,8 @@ export default function BrandLogo({
     <Image
       src="/logo.png"
       alt={site.siteName}
-      width={480}
-      height={120}
+      width={861}
+      height={195}
       priority
       className={imageClassName}
     />
