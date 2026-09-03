@@ -11,8 +11,8 @@ function NbMonogram({
     <Image
       src="/nb-monogram.png"
       alt="No BS Computers"
-      width={120}
-      height={80}
+      width={512}
+      height={512}
       className={className}
     />
   );
