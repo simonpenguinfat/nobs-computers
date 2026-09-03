@@ -30,6 +30,17 @@ export default async function BuyerPage() {
     .limit(1)
     .maybeSingle();
 
+  const { data: declinedRequest } = buildRequest
+    ? { data: null }
+    : await supabase
+        .from("build_requests")
+        .select("*")
+        .eq("buyer_id", user.id)
+        .eq("status", "rejected")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
   return (
     <>
       <NavbarAuth />
@@ -46,6 +57,7 @@ export default async function BuyerPage() {
           userEmail={user.email ?? profile?.email ?? ""}
           memberSince={profile?.created_at ?? user.created_at}
           initialRequest={(buildRequest as BuildRequest) ?? null}
+          initialDeclined={(declinedRequest as BuildRequest) ?? null}
         />
       </div>
     </>

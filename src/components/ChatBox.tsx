@@ -10,6 +10,10 @@ interface ChatBoxProps {
   userName: string;
 }
 
+function sameUser(a?: string | null, b?: string | null): boolean {
+  return Boolean(a && b && a.toLowerCase() === b.toLowerCase());
+}
+
 function truncate(text: string, max = 80): string {
   if (text.length <= max) return text;
   return `${text.slice(0, max)}…`;
@@ -72,17 +76,98 @@ async function resolveReplyPreview(
   };
 }
 
-export default function ChatBox({ buildRequestId, userId }: ChatBoxProps) {
+export default function ChatBox({ buildRequestId, userId, userName }: ChatBoxProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
+  const [selfId, setSelfId] = useState(userId);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getUser().then(({ data }) => {
+      const id = data.user?.id;
+      if (!cancelled && id) setSelfId(id);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, userId]);
+
+  useEffect(() => {
+    async function appendMessage(incoming: Message) {
+      if (!incoming?.id) return;
+
+      const { data: fullRow } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("id", incoming.id)
+        .maybeSingle();
+
+      const newMsg = (fullRow as Message | null) ?? incoming;
+      if (!newMsg.id) return;
+
+      const { data: profile } = newMsg.sender_id
+        ? await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", newMsg.sender_id)
+            .maybeSingle()
+        : { data: null };
+
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === newMsg.id)) {
+          return prev.map((m) =>
+            m.id === newMsg.id
+              ? {
+                  ...m,
+                  ...newMsg,
+                  sender_name: profile?.full_name ?? m.sender_name ?? "User",
+                  reply_to: m.reply_to,
+                }
+              : m
+          );
+        }
+
+        const parent = newMsg.reply_to_id
+          ? prev.find((m) => m.id === newMsg.reply_to_id)
+          : undefined;
+
+        const reply_to = parent
+          ? {
+              id: parent.id,
+              content: parent.content,
+              sender_name: parent.sender_name,
+            }
+          : null;
+
+        const enriched: Message = {
+          ...newMsg,
+          sender_name: profile?.full_name ?? "User",
+          reply_to,
+        };
+
+        if (newMsg.reply_to_id && !reply_to) {
+          resolveReplyPreview(supabase, newMsg.reply_to_id, prev).then(
+            (resolved) => {
+              if (!resolved) return;
+              setMessages((current) =>
+                current.map((m) =>
+                  m.id === newMsg.id ? { ...m, reply_to: resolved } : m
+                )
+              );
+            }
+          );
+        }
+
+        return [...prev, enriched];
+      });
+    }
+
     async function loadMessages() {
       const { data } = await supabase
         .from("messages")
@@ -117,51 +202,8 @@ export default function ChatBox({ buildRequestId, userId }: ChatBoxProps) {
           table: "messages",
           filter: `build_request_id=eq.${buildRequestId}`,
         },
-        async (payload) => {
-          const newMsg = payload.new as Message;
-
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("full_name")
-            .eq("id", newMsg.sender_id)
-            .single();
-
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === newMsg.id)) return prev;
-
-            const parent = newMsg.reply_to_id
-              ? prev.find((m) => m.id === newMsg.reply_to_id)
-              : undefined;
-
-            const reply_to = parent
-              ? {
-                  id: parent.id,
-                  content: parent.content,
-                  sender_name: parent.sender_name,
-                }
-              : null;
-
-            const enriched: Message = {
-              ...newMsg,
-              sender_name: profile?.full_name ?? "User",
-              reply_to,
-            };
-
-            if (newMsg.reply_to_id && !reply_to) {
-              resolveReplyPreview(supabase, newMsg.reply_to_id, prev).then(
-                (resolved) => {
-                  if (!resolved) return;
-                  setMessages((current) =>
-                    current.map((m) =>
-                      m.id === newMsg.id ? { ...m, reply_to: resolved } : m
-                    )
-                  );
-                }
-              );
-            }
-
-            return [...prev, enriched];
-          });
+        (payload) => {
+          void appendMessage(payload.new as Message);
         }
       )
       .subscribe();
@@ -198,7 +240,7 @@ export default function ChatBox({ buildRequestId, userId }: ChatBoxProps) {
       reply_to_id?: string;
     } = {
       build_request_id: buildRequestId,
-      sender_id: userId,
+      sender_id: selfId || userId,
       content: newMessage.trim(),
     };
 
@@ -206,11 +248,35 @@ export default function ChatBox({ buildRequestId, userId }: ChatBoxProps) {
       payload.reply_to_id = replyTo.id;
     }
 
-    const { error: insertError } = await supabase.from("messages").insert(payload);
+    const { data: inserted, error: insertError } = await supabase
+      .from("messages")
+      .insert(payload)
+      .select("*")
+      .single();
 
     if (insertError) {
       setSendError(insertError.message);
     } else {
+      if (inserted) {
+        const sent = inserted as Message;
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === sent.id)) return prev;
+          return [
+            ...prev,
+            {
+              ...sent,
+              sender_name: userName,
+              reply_to: replyTo
+                ? {
+                    id: replyTo.id,
+                    content: replyTo.content,
+                    sender_name: replyTo.sender_name,
+                  }
+                : null,
+            },
+          ];
+        });
+      }
       setNewMessage("");
       setReplyTo(null);
     }
@@ -231,7 +297,7 @@ export default function ChatBox({ buildRequestId, userId }: ChatBoxProps) {
           </p>
         )}
         {messages.map((msg) => {
-          const isOwn = msg.sender_id === userId;
+          const isOwn = sameUser(msg.sender_id, selfId);
           return (
             <div
               key={msg.id}

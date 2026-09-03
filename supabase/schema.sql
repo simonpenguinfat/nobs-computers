@@ -122,6 +122,8 @@ create table if not exists public.build_requests (
 
   review_kind text,
 
+  decline_reason text,
+
   created_at timestamptz not null default now(),
 
   updated_at timestamptz not null default now()

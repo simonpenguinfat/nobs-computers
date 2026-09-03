@@ -1,39 +1,11 @@
 -- ============================================================
--- Alerts for new requests + buyer updates
+-- Decline reason (admin writes why before declining)
 -- Run ONCE in Supabase → SQL Editor → New query → Run
 -- ============================================================
 
 alter table public.build_requests
-  add column if not exists needs_review boolean not null default false;
+  add column if not exists decline_reason text;
 
-alter table public.build_requests
-  add column if not exists review_kind text;
-
-alter table public.build_requests
-  drop constraint if exists build_requests_review_kind_check;
-
-alter table public.build_requests
-  add constraint build_requests_review_kind_check
-  check (review_kind is null or review_kind in ('new', 'updated'));
-
--- New buyer requests always start as unread alerts
-create or replace function public.enforce_buyer_build_request_insert()
-returns trigger as $$
-begin
-  if not public.is_builder() then
-    new.needs_review := true;
-    new.review_kind := 'new';
-  end if;
-  return new;
-end;
-$$ language plpgsql security definer set search_path = public;
-
-drop trigger if exists enforce_buyer_build_request_insert_trigger on public.build_requests;
-create trigger enforce_buyer_build_request_insert_trigger
-  before insert on public.build_requests
-  for each row execute function public.enforce_buyer_build_request_insert();
-
--- Buyers can update questionnaire fields; builders dismiss alerts
 create or replace function public.enforce_buyer_build_request_update()
 returns trigger as $$
 declare
@@ -98,8 +70,3 @@ drop trigger if exists enforce_buyer_build_request_update_trigger on public.buil
 create trigger enforce_buyer_build_request_update_trigger
   before update on public.build_requests
   for each row execute function public.enforce_buyer_build_request_update();
-
-do $$ begin
-  alter publication supabase_realtime add table public.build_requests;
-exception when duplicate_object then null;
-end $$;

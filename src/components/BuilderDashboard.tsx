@@ -33,6 +33,8 @@ export default function BuilderDashboard({
   const [saveOk, setSaveOk] = useState(false);
   const [draftStatus, setDraftStatus] = useState<BuildRequest["status"]>("pending");
   const [draftEstimate, setDraftEstimate] = useState("");
+  const [showDeclineForm, setShowDeclineForm] = useState(false);
+  const [declineReason, setDeclineReason] = useState("");
   const quoteEditorRef = useRef<BuildQuoteEditorHandle>(null);
   const supabase = useMemo(() => createClient(), []);
 
@@ -56,11 +58,15 @@ export default function BuilderDashboard({
     }
     setSaveOk(false);
     setActionError("");
+    setShowDeclineForm(false);
+    setDeclineReason("");
   }
 
   function closeClient() {
     setSelectedId(null);
     setActiveTab("drafts");
+    setShowDeclineForm(false);
+    setDeclineReason("");
   }
 
   function formatStatusError(message: string): string {
@@ -72,6 +78,15 @@ export default function BuilderDashboard({
 
     if (lower.includes("permission denied") || lower.includes("row-level security")) {
       return "Permission denied. Make sure your account has the builder role in Supabase.";
+    }
+
+    if (
+      lower.includes("decline_reason") ||
+      lower.includes("schema cache")
+    ) {
+      if (lower.includes("decline_reason")) {
+        return "Decline reasons aren't set up yet. Run decline-reason.sql in the Supabase SQL Editor, then try again.";
+      }
     }
 
     if (
@@ -88,7 +103,10 @@ export default function BuilderDashboard({
   async function updateStatus(
     requestId: string,
     status: BuildRequest["status"],
-    options?: { onlyFromStatus?: BuildRequest["status"] }
+    options?: {
+      onlyFromStatus?: BuildRequest["status"];
+      extra?: Record<string, unknown>;
+    }
   ): Promise<boolean> {
     setUpdating(true);
     setActionError("");
@@ -101,7 +119,11 @@ export default function BuilderDashboard({
 
     let query = supabase
       .from("build_requests")
-      .update({ status, updated_at: new Date().toISOString() })
+      .update({
+        status,
+        updated_at: new Date().toISOString(),
+        ...(options?.extra ?? {}),
+      })
       .eq("id", requestId);
 
     if (options?.onlyFromStatus) {
@@ -149,10 +171,20 @@ export default function BuilderDashboard({
   }
 
   async function declineOrder(requestId: string) {
-    if (!confirm("Decline this order? It will be removed from your dashboard.")) {
+    const reason = declineReason.trim();
+    if (!reason) {
+      setActionError("Write a reason before declining this request.");
       return;
     }
-    await updateStatus(requestId, "rejected", { onlyFromStatus: "pending" });
+
+    const ok = await updateStatus(requestId, "rejected", {
+      onlyFromStatus: "pending",
+      extra: { decline_reason: reason },
+    });
+    if (ok) {
+      setShowDeclineForm(false);
+      setDeclineReason("");
+    }
   }
 
   async function cancelOrder(requestId: string) {
@@ -679,24 +711,70 @@ export default function BuilderDashboard({
                           {actionError && (
                             <p className="text-sm text-red-700">{actionError}</p>
                           )}
-                          <div className="flex flex-col sm:flex-row gap-3">
-                            <button
-                              type="button"
-                              onClick={() => acceptOrder(selected.id)}
-                              disabled={updating}
-                              className="flex-1 py-2.5 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white font-medium rounded-lg text-sm transition-colors"
-                            >
-                              Accept Order
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => declineOrder(selected.id)}
-                              disabled={updating}
-                              className="flex-1 py-2.5 border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50 font-medium rounded-lg text-sm transition-colors"
-                            >
-                              Decline Order
-                            </button>
-                          </div>
+                          {showDeclineForm ? (
+                            <div className="space-y-3">
+                              <label className="block">
+                                <span className="text-sm font-medium text-neutral-900">
+                                  Why are you declining this request?
+                                </span>
+                                <textarea
+                                  value={declineReason}
+                                  onChange={(e) => setDeclineReason(e.target.value)}
+                                  rows={4}
+                                  maxLength={1000}
+                                  placeholder="This reason will be shown to the customer."
+                                  className="mt-1.5 w-full bg-white border border-border rounded-lg px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:border-neutral-400"
+                                />
+                              </label>
+                              <p className="text-xs text-neutral-500">
+                                {declineReason.trim().length}/1000
+                              </p>
+                              <div className="flex flex-col sm:flex-row gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => declineOrder(selected.id)}
+                                  disabled={updating || !declineReason.trim()}
+                                  className="flex-1 py-2.5 bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white font-medium rounded-lg text-sm transition-colors"
+                                >
+                                  {updating ? "Declining…" : "Confirm decline"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setShowDeclineForm(false);
+                                    setDeclineReason("");
+                                    setActionError("");
+                                  }}
+                                  disabled={updating}
+                                  className="flex-1 py-2.5 border border-border text-neutral-700 hover:bg-white disabled:opacity-50 font-medium rounded-lg text-sm transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col sm:flex-row gap-3">
+                              <button
+                                type="button"
+                                onClick={() => acceptOrder(selected.id)}
+                                disabled={updating}
+                                className="flex-1 py-2.5 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white font-medium rounded-lg text-sm transition-colors"
+                              >
+                                Accept Order
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowDeclineForm(true);
+                                  setActionError("");
+                                }}
+                                disabled={updating}
+                                className="flex-1 py-2.5 border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50 font-medium rounded-lg text-sm transition-colors"
+                              >
+                                Decline Order
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </>

@@ -19,6 +19,7 @@ export interface BuildRequest {
   estimated_cost: number | null;
   needs_review?: boolean;
   review_kind?: "new" | "updated" | null;
+  decline_reason?: string | null;
   created_at: string;
   updated_at: string;
 }
