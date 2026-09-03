@@ -2,12 +2,21 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { BUILD_PROGRESS_STAGES, BUILD_STATUSES, isArchivedStatus, needsAdminOutcomeAck, resolveBuildStage, staysOnAdminDashboard, type BuildProgressStage } from "@/lib/types";
+import {
+  BUILD_PROGRESS_STAGES,
+  BUILD_STATUSES,
+  isArchivedStatus,
+  needsAdminOutcomeAck,
+  resolveBuildStage,
+  staysOnAdminDashboard,
+  type BuildProgressStage,
+} from "@/lib/types";
 import type { BuildRequest, Profile } from "@/lib/types";
 import ChatBox from "./ChatBox";
 import BuildQuoteEditor, { type BuildQuoteEditorHandle } from "./BuildQuoteEditor";
 import OwnedPartsSummary from "./OwnedPartsSummary";
 import OutcomeNotice, { CloseReasonForm } from "./OutcomeNotice";
+import BuildProgressBar from "./BuildProgressBar";
 
 interface ClientWithProfile extends BuildRequest {
   profiles: Profile;
@@ -176,7 +185,28 @@ export default function BuilderDashboard({
     });
     if (ok) {
       setDraftStage("draft");
+      setDraftStatus("in_progress");
       setActiveTab("drafts");
+    }
+  }
+
+  function selectProgressStage(stage: BuildProgressStage) {
+    if (!selected || selected.status === "pending" || updating) return;
+    if (needsAdminOutcomeAck(selected)) return;
+
+    setDraftStage(stage);
+    setSaveOk(false);
+
+    // Keep order status matched with the buyer progress track
+    if (stage === "ready") {
+      if (selected.status !== "not_received") {
+        setDraftStatus("completed");
+      }
+      return;
+    }
+
+    if (draftStatus === "completed") {
+      setDraftStatus("in_progress");
     }
   }
 
@@ -566,6 +596,18 @@ export default function BuilderDashboard({
                     <p className="text-xs text-neutral-500">
                       {client.use_case} · ${client.budget?.toLocaleString()}
                     </p>
+                    {!awaitingAck && (
+                      <p className="text-xs text-neutral-600 mt-1.5">
+                        Step:{" "}
+                        <span className="font-medium text-neutral-800">
+                          {
+                            BUILD_PROGRESS_STAGES.find(
+                              (s) => s.id === resolveBuildStage(client)
+                            )?.label
+                          }
+                        </span>
+                      </p>
+                    )}
                     {awaitingAck ? (
                       <p className="text-xs text-red-800 mt-2 font-semibold">
                         Customer cancelled — confirm
@@ -601,9 +643,31 @@ export default function BuilderDashboard({
 
               <div className="bg-surface-card border border-border rounded-xl">
                 <div className="px-4 sm:px-5 pt-5 pb-0 border-b border-border bg-white">
-                  <h2 className="font-semibold mb-4 text-neutral-900">
+                  <h2 className="font-semibold mb-3 text-neutral-900">
                     {selected.profiles?.full_name || "Client"}&apos;s Build
                   </h2>
+                  <div className="mb-4 rounded-xl border border-border bg-neutral-50 px-3 py-3">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                        Build progress
+                      </p>
+                      <p className="text-xs text-neutral-600">
+                        {selected.status === "pending"
+                          ? "Accept the order to move past Review"
+                          : "Click a step, then Save changes"}
+                      </p>
+                    </div>
+                    <BuildProgressBar
+                      request={selected}
+                      stage={draftStage}
+                      interactive={
+                        selected.status !== "pending" &&
+                        !needsAdminOutcomeAck(selected)
+                      }
+                      disabled={updating}
+                      onSelect={selectProgressStage}
+                    />
+                  </div>
                   <div className="flex gap-1 overflow-x-auto">
                     <button
                       type="button"
@@ -710,7 +774,16 @@ export default function BuilderDashboard({
                               value={draftStatus}
                               disabled={updating}
                               onChange={(e) => {
-                                setDraftStatus(e.target.value as BuildRequest["status"]);
+                                const next = e.target.value as BuildRequest["status"];
+                                setDraftStatus(next);
+                                if (next === "completed") {
+                                  setDraftStage("ready");
+                                } else if (
+                                  next === "in_progress" &&
+                                  draftStage === "ready"
+                                ) {
+                                  setDraftStage("testing");
+                                }
                                 setSaveOk(false);
                               }}
                               className="w-full sm:w-auto bg-white border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-neutral-400"
@@ -733,26 +806,6 @@ export default function BuilderDashboard({
                             </select>
                           </div>
                         )}
-                        <div className="flex-1 sm:flex-none">
-                          <label className="text-xs text-neutral-500 block mb-1">
-                            Progress stage
-                          </label>
-                          <select
-                            value={draftStage}
-                            disabled={updating || selected.status === "pending"}
-                            onChange={(e) => {
-                              setDraftStage(e.target.value as BuildProgressStage);
-                              setSaveOk(false);
-                            }}
-                            className="w-full sm:w-44 bg-white border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-neutral-400 disabled:opacity-60"
-                          >
-                            {BUILD_PROGRESS_STAGES.map((stage) => (
-                              <option key={stage.id} value={stage.id}>
-                                {stage.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
                         <div className="flex-1 sm:flex-none">
                           <label className="text-xs text-neutral-500 block mb-1">
                             Estimated Cost (CAD)
