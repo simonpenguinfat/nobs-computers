@@ -18,7 +18,7 @@ interface BuilderDashboardProps {
   builderName: string;
 }
 
-type DetailTab = "build" | "chat";
+type DetailTab = "drafts" | "parts" | "chat";
 
 export default function BuilderDashboard({
   clients: initialClients,
@@ -27,7 +27,7 @@ export default function BuilderDashboard({
 }: BuilderDashboardProps) {
   const [clients, setClients] = useState(initialClients);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<DetailTab>("build");
+  const [activeTab, setActiveTab] = useState<DetailTab>("drafts");
   const [updating, setUpdating] = useState(false);
   const [actionError, setActionError] = useState("");
   const [saveOk, setSaveOk] = useState(false);
@@ -41,13 +41,13 @@ export default function BuilderDashboard({
   function removeClient(requestId: string) {
     setClients((prev) => prev.filter((c) => c.id !== requestId));
     setSelectedId(null);
-    setActiveTab("build");
+    setActiveTab("drafts");
   }
 
   function openClient(clientId: string) {
     const client = clients.find((c) => c.id === clientId);
     setSelectedId(clientId);
-    setActiveTab(client?.status === "pending" ? "chat" : "build");
+    setActiveTab(client?.status === "pending" ? "parts" : "drafts");
     if (client) {
       setDraftStatus(client.status);
       setDraftEstimate(
@@ -60,7 +60,7 @@ export default function BuilderDashboard({
 
   function closeClient() {
     setSelectedId(null);
-    setActiveTab("build");
+    setActiveTab("drafts");
   }
 
   function formatStatusError(message: string): string {
@@ -144,7 +144,7 @@ export default function BuilderDashboard({
       onlyFromStatus: "pending",
     });
     if (ok) {
-      setActiveTab("build");
+      setActiveTab("drafts");
     }
   }
 
@@ -466,25 +466,38 @@ export default function BuilderDashboard({
                 ← Back to orders
               </button>
 
-              <div className="bg-surface-card border border-border rounded-xl overflow-hidden">
+              <div className="bg-surface-card border border-border rounded-xl">
                 <div className="px-4 sm:px-5 pt-5 pb-0 border-b border-border bg-white">
                   <h2 className="font-semibold mb-4 text-neutral-900">
                     {selected.profiles?.full_name || "Client"}&apos;s Build
                   </h2>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 overflow-x-auto">
                     <button
-                      onClick={() => setActiveTab("build")}
-                      className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
-                        activeTab === "build"
+                      type="button"
+                      onClick={() => setActiveTab("drafts")}
+                      className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${
+                        activeTab === "drafts"
                           ? "bg-neutral-50 text-neutral-900 border-b-2 border-neutral-900"
                           : "text-neutral-500 hover:text-neutral-700"
                       }`}
                     >
-                      Build Details
+                      PC Drafts
                     </button>
                     <button
+                      type="button"
+                      onClick={() => setActiveTab("parts")}
+                      className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${
+                        activeTab === "parts"
+                          ? "bg-neutral-50 text-neutral-900 border-b-2 border-neutral-900"
+                          : "text-neutral-500 hover:text-neutral-700"
+                      }`}
+                    >
+                      Existing Parts
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setActiveTab("chat")}
-                      className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
+                      className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${
                         activeTab === "chat"
                           ? "bg-neutral-50 text-neutral-900 border-b-2 border-neutral-900"
                           : "text-neutral-500 hover:text-neutral-700"
@@ -522,68 +535,7 @@ export default function BuilderDashboard({
                     </div>
                   )}
 
-                  {activeTab === "build" ? (
-                    <>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <p className="text-xs text-neutral-500">Use Case</p>
-                          <p className="text-sm text-neutral-900">{selected.use_case}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-neutral-500">Budget</p>
-                          <p className="text-sm text-neutral-900">
-                            ${selected.budget?.toLocaleString()}
-                          </p>
-                        </div>
-                        <div className="sm:col-span-2">
-                          <p className="text-xs text-neutral-500">Preferences</p>
-                          <p className="text-sm text-neutral-900">
-                            {selected.preferences || "None"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mb-4">
-                        <OwnedPartsSummary raw={selected.existing_parts} />
-                      </div>
-
-                      {selected.status === "pending" && (
-                        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
-                          <p className="text-sm text-amber-900">
-                            <strong>Review this order.</strong> Chat with the customer first,
-                            then accept or decline.
-                          </p>
-                          {actionError && (
-                            <p className="text-sm text-red-700">{actionError}</p>
-                          )}
-                          <div className="flex flex-col sm:flex-row gap-3">
-                            <button
-                              type="button"
-                              onClick={() => acceptOrder(selected.id)}
-                              disabled={updating}
-                              className="flex-1 py-2.5 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white font-medium rounded-lg text-sm transition-colors"
-                            >
-                              Accept Order
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => declineOrder(selected.id)}
-                              disabled={updating}
-                              className="flex-1 py-2.5 border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50 font-medium rounded-lg text-sm transition-colors"
-                            >
-                              Decline Order
-                            </button>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setActiveTab("chat")}
-                            className="w-full py-2 text-sm text-amber-800 hover:text-amber-900 font-medium"
-                          >
-                            Open chat with customer →
-                          </button>
-                        </div>
-                      )}
-
+                  <div className={activeTab === "drafts" ? "" : "hidden"}>
                       {selected.status === "not_received" && (
                         <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
                           <p className="text-sm font-medium text-red-800">
@@ -691,15 +643,66 @@ export default function BuilderDashboard({
                           Cancel Order
                         </button>
                       )}
+                    </div>
 
-                      <button
-                        onClick={() => setActiveTab("chat")}
-                        className="mt-4 w-full py-2.5 border border-border text-neutral-700 hover:bg-neutral-50 rounded-lg text-sm font-medium transition-colors"
-                      >
-                        Open chat with {selected.profiles?.full_name || "client"}
-                      </button>
+                  {activeTab === "parts" && (
+                    <>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <p className="text-xs text-neutral-500">Use Case</p>
+                          <p className="text-sm text-neutral-900">{selected.use_case}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-neutral-500">Budget</p>
+                          <p className="text-sm text-neutral-900">
+                            ${selected.budget?.toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <p className="text-xs text-neutral-500">Preferences</p>
+                          <p className="text-sm text-neutral-900">
+                            {selected.preferences || "None"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mb-4">
+                        <OwnedPartsSummary raw={selected.existing_parts} />
+                      </div>
+
+                      {selected.status === "pending" && (
+                        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+                          <p className="text-sm text-amber-900">
+                            <strong>Review this order.</strong> Chat with the customer first,
+                            then accept or decline.
+                          </p>
+                          {actionError && (
+                            <p className="text-sm text-red-700">{actionError}</p>
+                          )}
+                          <div className="flex flex-col sm:flex-row gap-3">
+                            <button
+                              type="button"
+                              onClick={() => acceptOrder(selected.id)}
+                              disabled={updating}
+                              className="flex-1 py-2.5 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white font-medium rounded-lg text-sm transition-colors"
+                            >
+                              Accept Order
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => declineOrder(selected.id)}
+                              disabled={updating}
+                              className="flex-1 py-2.5 border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50 font-medium rounded-lg text-sm transition-colors"
+                            >
+                              Decline Order
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </>
-                  ) : (
+                  )}
+
+                  {activeTab === "chat" && (
                     <ChatBox
                       buildRequestId={selected.id}
                       userId={builderId}

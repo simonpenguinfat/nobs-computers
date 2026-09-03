@@ -127,7 +127,7 @@ export default function PartSearchSelect({
               className="w-full bg-surface-light border border-border rounded-md px-2.5 py-1.5 text-sm"
             />
           </div>
-          <ul className="max-h-48 overflow-y-auto py-1" role="listbox">
+          <ul className="max-h-40 overflow-y-auto py-1" role="listbox">
             {allowNone && (
               <li>
                 <button
@@ -165,23 +165,23 @@ export default function PartSearchSelect({
             {filtered.length === 0 && (
               <li className="px-3 py-2 text-sm text-neutral-500">No matching models</li>
             )}
-            {allowOther && (
-              <li className="border-t border-border mt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onChange(otherMode && value !== OTHER_PART ? value : OTHER_PART);
-                    onClose();
-                  }}
-                  className={`w-full text-left px-3 py-2 text-sm hover:bg-brand-50 ${
-                    otherMode ? "bg-brand-50 font-medium text-brand-700" : "text-neutral-600"
-                  }`}
-                >
-                  Other
-                </button>
-              </li>
-            )}
           </ul>
+          {allowOther && (
+            <div className="border-t border-border">
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(otherMode && value !== OTHER_PART ? value : OTHER_PART);
+                  onClose();
+                }}
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-brand-50 ${
+                  otherMode ? "bg-brand-50 font-medium text-brand-700" : "text-neutral-600"
+                }`}
+              >
+                Other
+              </button>
+            </div>
+          )}
         </div>
       )}
 

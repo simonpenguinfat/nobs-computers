@@ -36,6 +36,8 @@ export default function ExistingPartsPicker({
             label={partCategoryLabel(category)}
             value={value[category] ?? "None"}
             options={partOptions(category)}
+            allowNone
+            allowOther
             open={openCategory === category}
             onToggle={() =>
               setOpenCategory((current) => (current === category ? null : category))
