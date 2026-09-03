@@ -802,27 +802,78 @@ export default function BuilderDashboard({
 
                   {activeTab === "parts" && (
                     <>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <p className="text-xs text-neutral-500">Use Case</p>
-                          <p className="text-sm text-neutral-900">{selected.use_case}</p>
+                      <div className="space-y-6 mb-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                          <div className="space-y-1.5">
+                            <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                              Use Case
+                            </p>
+                            <p className="text-sm text-neutral-900 leading-relaxed">
+                              {selected.use_case || "—"}
+                            </p>
+                          </div>
+                          <div className="space-y-1.5">
+                            <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                              Budget
+                            </p>
+                            <p className="text-sm text-neutral-900 leading-relaxed">
+                              ${selected.budget?.toLocaleString()}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs text-neutral-500">Budget</p>
-                          <p className="text-sm text-neutral-900">
-                            ${selected.budget?.toLocaleString()}
-                          </p>
-                        </div>
-                        <div className="sm:col-span-2">
-                          <p className="text-xs text-neutral-500">Preferences</p>
-                          <p className="text-sm text-neutral-900">
-                            {selected.preferences || "None"}
-                          </p>
-                        </div>
-                      </div>
 
-                      <div className="mb-4">
-                        <OwnedPartsSummary raw={selected.existing_parts} />
+                        <div className="space-y-3">
+                          <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                            Preferences
+                          </p>
+                          {(() => {
+                            const lines = (selected.preferences || "")
+                              .split("\n")
+                              .map((line) => line.trim())
+                              .filter(Boolean);
+
+                            if (lines.length === 0) {
+                              return (
+                                <p className="text-sm text-neutral-500">None</p>
+                              );
+                            }
+
+                            return (
+                              <div className="space-y-3 rounded-lg border border-border bg-neutral-50 px-4 py-3.5">
+                                {lines.map((line, index) => {
+                                  const sep = line.indexOf(":");
+                                  const hasLabel = sep > 0 && sep < 40;
+                                  const label = hasLabel
+                                    ? line.slice(0, sep).trim()
+                                    : null;
+                                  const value = hasLabel
+                                    ? line.slice(sep + 1).trim()
+                                    : line;
+
+                                  return (
+                                    <div
+                                      key={`${index}-${line.slice(0, 24)}`}
+                                      className="space-y-1"
+                                    >
+                                      {label ? (
+                                        <p className="text-xs text-neutral-500">
+                                          {label}
+                                        </p>
+                                      ) : null}
+                                      <p className="text-sm text-neutral-900 leading-relaxed whitespace-pre-wrap">
+                                        {value || "—"}
+                                      </p>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        <div className="pt-1">
+                          <OwnedPartsSummary raw={selected.existing_parts} />
+                        </div>
                       </div>
 
                       {selected.status === "pending" && (
