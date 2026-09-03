@@ -118,6 +118,10 @@ create table if not exists public.build_requests (
 
   estimated_cost numeric,
 
+  needs_review boolean not null default false,
+
+  review_kind text,
+
   created_at timestamptz not null default now(),
 
   updated_at timestamptz not null default now()

@@ -17,6 +17,8 @@ export interface BuildRequest {
   preferences: string;
   status: "pending" | "in_progress" | "completed" | "cancelled" | "confirmed" | "not_received" | "rejected";
   estimated_cost: number | null;
+  needs_review?: boolean;
+  review_kind?: "new" | "updated" | null;
   created_at: string;
   updated_at: string;
 }

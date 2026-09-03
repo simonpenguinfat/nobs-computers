@@ -33,12 +33,15 @@ export default function BuyerSurvey({
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const supabase = useMemo(() => createClient(), []);
-  const canEdit = !existingRequest || existingRequest.status === "pending";
+  const canEdit =
+    !existingRequest ||
+    existingRequest.status === "pending" ||
+    existingRequest.status === "in_progress";
 
   if (existingRequest && !canEdit) {
     return (
       <p className="text-sm text-neutral-500">
-        Your request has been accepted. Contact us in chat if you need changes.
+        This build is no longer editable. Contact us in chat if you need changes.
       </p>
     );
   }
@@ -91,6 +94,14 @@ export default function BuyerSurvey({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {existingRequest && (
+        <p className="text-sm text-neutral-500">
+          You can update your use case, budget, parts, and notes. Your chat,
+          suggested builds, and order status stay as they are. Your builder will
+          be notified.
+        </p>
+      )}
+
       <div>
         <label className="block text-sm font-medium mb-1.5 text-neutral-700">
           What will you use this PC for?
@@ -149,7 +160,11 @@ export default function BuyerSurvey({
         <p className="text-red-600 text-sm">{error}</p>
       )}
       {saved && (
-        <p className="text-green-700 text-sm">Saved successfully!</p>
+        <p className="text-green-700 text-sm">
+          {existingRequest
+            ? "Request updated. Your builder has been notified."
+            : "Request submitted."}
+        </p>
       )}
 
       <button
@@ -157,7 +172,11 @@ export default function BuyerSurvey({
         disabled={loading}
         className="w-full py-2.5 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
       >
-        {loading ? "Saving..." : existingRequest ? "Update My Request" : "Submit Request"}
+        {loading
+          ? "Saving..."
+          : existingRequest
+            ? "Update request"
+            : "Submit Request"}
       </button>
     </form>
   );

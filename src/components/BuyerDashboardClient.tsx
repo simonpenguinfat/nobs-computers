@@ -101,7 +101,7 @@ export default function BuyerDashboardClient({
             <div className="space-y-4 sm:space-y-6">
               <div>
                 <h3 className="font-semibold mb-4 text-neutral-900">
-                  Tell Us What You Need
+                  {request ? "Update request" : "Tell Us What You Need"}
                 </h3>
                 <BuyerSurvey
                   userId={userId}

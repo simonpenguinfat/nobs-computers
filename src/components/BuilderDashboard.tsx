@@ -74,6 +74,14 @@ export default function BuilderDashboard({
       return "Permission denied. Make sure your account has the builder role in Supabase.";
     }
 
+    if (
+      lower.includes("needs_review") ||
+      lower.includes("review_kind") ||
+      lower.includes("schema cache")
+    ) {
+      return "Alerts aren't set up yet. Run request-review-alerts.sql in the Supabase SQL Editor, then refresh.";
+    }
+
     return message;
   }
 
@@ -152,6 +160,38 @@ export default function BuilderDashboard({
       return;
     }
     await updateStatus(requestId, "cancelled");
+  }
+
+  async function markReviewed(requestId: string) {
+    setUpdating(true);
+    setActionError("");
+
+    const { data, error } = await supabase
+      .from("build_requests")
+      .update({
+        needs_review: false,
+        review_kind: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", requestId)
+      .select("*")
+      .maybeSingle();
+
+    if (error) {
+      setActionError(formatStatusError(error.message));
+      setUpdating(false);
+      return;
+    }
+
+    if (data) {
+      setClients((prev) =>
+        prev.map((c) =>
+          c.id === requestId ? { ...c, ...(data as BuildRequest) } : c
+        )
+      );
+    }
+
+    setUpdating(false);
   }
 
   async function saveChanges() {
@@ -245,10 +285,56 @@ export default function BuilderDashboard({
   const pendingCount = clients.filter((c) => c.status === "pending").length;
   const activeCount = clients.filter((c) => c.status === "in_progress").length;
   const issueCount = clients.filter((c) => c.status === "not_received").length;
+  const alertCount = clients.filter((c) => c.needs_review).length;
+  const sortedClients = [...clients].sort((a, b) => {
+    if (!!a.needs_review !== !!b.needs_review) {
+      return a.needs_review ? -1 : 1;
+    }
+    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+  });
 
   useEffect(() => {
     const channel = supabase
       .channel("admin-build-requests")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "build_requests",
+        },
+        async (payload) => {
+          const inserted = payload.new as BuildRequest;
+          if (isArchivedStatus(inserted.status)) return;
+
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", inserted.buyer_id)
+            .maybeSingle();
+
+          setClients((prev) => {
+            if (prev.some((c) => c.id === inserted.id)) {
+              return prev.map((c) =>
+                c.id === inserted.id ? { ...c, ...inserted } : c
+              );
+            }
+            return [
+              {
+                ...inserted,
+                profiles: (profile as Profile) ?? {
+                  id: inserted.buyer_id,
+                  email: "",
+                  full_name: "New customer",
+                  role: "buyer",
+                  created_at: inserted.created_at,
+                },
+              },
+              ...prev,
+            ];
+          });
+        }
+      )
       .on(
         "postgres_changes",
         {
@@ -285,14 +371,18 @@ export default function BuilderDashboard({
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
         <div className="bg-surface-card border border-border rounded-xl p-3 sm:p-4 text-center">
           <p className="text-xl sm:text-2xl font-bold text-neutral-900">{clients.length}</p>
           <p className="text-xs text-neutral-500 mt-1">Active Orders</p>
         </div>
         <div className="bg-surface-card border border-border rounded-xl p-3 sm:p-4 text-center">
-          <p className="text-xl sm:text-2xl font-bold text-amber-600">{pendingCount}</p>
-          <p className="text-xs text-neutral-500 mt-1">Needs Review</p>
+          <p className="text-xl sm:text-2xl font-bold text-amber-600">{alertCount}</p>
+          <p className="text-xs text-neutral-500 mt-1">Alerts</p>
+        </div>
+        <div className="bg-surface-card border border-border rounded-xl p-3 sm:p-4 text-center">
+          <p className="text-xl sm:text-2xl font-bold text-neutral-700">{pendingCount}</p>
+          <p className="text-xs text-neutral-500 mt-1">Awaiting Accept</p>
         </div>
         <div className="bg-surface-card border border-border rounded-xl p-3 sm:p-4 text-center">
           <p className="text-xl sm:text-2xl font-bold text-green-600">{activeCount}</p>
@@ -313,9 +403,15 @@ export default function BuilderDashboard({
             </div>
           ) : (
             <div className="space-y-2">
-              {clients.map((client) => {
+              {sortedClients.map((client) => {
                 const statusInfo = BUILD_STATUSES[client.status];
                 const isSelected = client.id === selectedId;
+                const alertLabel =
+                  client.review_kind === "updated"
+                    ? "Request updated"
+                    : client.needs_review
+                      ? "New request"
+                      : null;
                 return (
                   <button
                     key={client.id}
@@ -323,7 +419,9 @@ export default function BuilderDashboard({
                     className={`w-full text-left p-4 rounded-xl border transition-all ${
                       isSelected
                         ? "border-neutral-900 bg-neutral-50"
-                        : client.status === "pending"
+                        : client.needs_review
+                          ? "border-amber-400 bg-amber-50 hover:border-amber-500"
+                          : client.status === "pending"
                           ? "border-amber-300 bg-amber-50 hover:border-amber-400"
                           : client.status === "not_received"
                             ? "border-red-300 bg-red-50 hover:border-red-400"
@@ -343,6 +441,11 @@ export default function BuilderDashboard({
                     <p className="text-xs text-neutral-500">
                       {client.use_case} · ${client.budget?.toLocaleString()}
                     </p>
+                    {alertLabel && (
+                      <p className="text-xs text-amber-800 mt-2 font-semibold">
+                        ● {alertLabel}
+                      </p>
+                    )}
                     <p className="text-xs text-neutral-700 mt-2 font-medium">
                       {client.status === "pending" ? "Review & chat →" : "View build →"}
                     </p>
@@ -388,7 +491,7 @@ export default function BuilderDashboard({
                       }`}
                     >
                       Chat
-                      {selected.status === "pending" && (
+                      {(selected.status === "pending" || selected.needs_review) && (
                         <span className="ml-1.5 text-amber-600">●</span>
                       )}
                     </button>
@@ -396,6 +499,29 @@ export default function BuilderDashboard({
                 </div>
 
                 <div className="p-4 sm:p-5 bg-white">
+                  {selected.needs_review && (
+                    <div className="mb-4 bg-amber-50 border border-amber-300 rounded-lg p-4 space-y-3">
+                      <p className="text-sm font-semibold text-amber-950">
+                        {selected.review_kind === "updated"
+                          ? "Customer updated their request"
+                          : "New build request"}
+                      </p>
+                      <p className="text-sm text-amber-900">
+                        {selected.review_kind === "updated"
+                          ? "Review the latest use case, budget, parts, and notes. Suggested builds, chat, and status were kept."
+                          : "A new customer submitted a build request. Review the details, then chat and accept or decline."}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => markReviewed(selected.id)}
+                        disabled={updating}
+                        className="w-full sm:w-auto px-4 py-2 bg-amber-800 hover:bg-amber-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg"
+                      >
+                        {updating ? "Saving…" : "Mark as reviewed"}
+                      </button>
+                    </div>
+                  )}
+
                   {activeTab === "build" ? (
                     <>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
