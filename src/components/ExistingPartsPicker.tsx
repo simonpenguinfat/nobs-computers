@@ -26,8 +26,8 @@ export default function ExistingPartsPicker({
         Parts you already own
       </p>
       <p className="text-xs text-neutral-500 mb-3">
-        Leave a part as None if we should supply it. Search and pick a model if
-        you are bringing your own.
+        Leave a part as None if we should supply it. Search and pick a model, or
+        choose Other to type a name that isn&apos;t listed.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-visible">
         {OWNABLE_PART_CATEGORIES.map((category) => (

@@ -1,16 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { NONE_PART } from "@/lib/types";
+import { NONE_PART, OTHER_PART } from "@/lib/types";
 
 interface PartSearchSelectProps {
-  label: string;
+  label?: string;
   value: string;
   options: string[];
   open: boolean;
   onToggle: () => void;
   onClose: () => void;
   onChange: (value: string) => void;
+  allowNone?: boolean;
+  allowOther?: boolean;
+  placeholder?: string;
 }
 
 export default function PartSearchSelect({
@@ -21,17 +24,31 @@ export default function PartSearchSelect({
   onToggle,
   onClose,
   onChange,
+  allowNone = true,
+  allowOther = true,
+  placeholder = "Select a model…",
 }: PartSearchSelectProps) {
   const [query, setQuery] = useState("");
   const rootRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const customRef = useRef<HTMLInputElement>(null);
+
+  const catalog = useMemo(
+    () => options.filter((option) => option !== NONE_PART && option !== OTHER_PART),
+    [options]
+  );
+
+  const listed = catalog.includes(value);
+  const otherMode =
+    allowOther &&
+    value !== NONE_PART &&
+    (value === OTHER_PART || (!listed && value.trim() !== ""));
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    const models = options.filter((option) => option !== NONE_PART);
-    if (!needle) return models;
-    return models.filter((option) => option.toLowerCase().includes(needle));
-  }, [options, query]);
+    if (!needle) return catalog;
+    return catalog.filter((option) => option.toLowerCase().includes(needle));
+  }, [catalog, query]);
 
   useEffect(() => {
     if (!open) {
@@ -40,6 +57,12 @@ export default function PartSearchSelect({
     }
     searchRef.current?.focus();
   }, [open]);
+
+  useEffect(() => {
+    if (otherMode && value === OTHER_PART) {
+      customRef.current?.focus();
+    }
+  }, [otherMode, value]);
 
   useEffect(() => {
     if (!open) return;
@@ -62,11 +85,21 @@ export default function PartSearchSelect({
     };
   }, [open, onClose]);
 
-  const display = value?.trim() || NONE_PART;
+  const display = value?.trim()
+    ? value === OTHER_PART
+      ? OTHER_PART
+      : value
+    : allowNone
+      ? NONE_PART
+      : placeholder;
+
+  const isPlaceholder = !value?.trim() || value === NONE_PART || value === OTHER_PART;
 
   return (
     <div ref={rootRef} className={`relative ${open ? "z-20" : "z-10"}`}>
-      <p className="text-xs font-medium text-neutral-500 mb-1">{label}</p>
+      {label ? (
+        <p className="text-xs font-medium text-neutral-500 mb-1">{label}</p>
+      ) : null}
       <button
         type="button"
         onClick={onToggle}
@@ -76,7 +109,7 @@ export default function PartSearchSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <span className={display === NONE_PART ? "text-neutral-500" : "text-neutral-900"}>
+        <span className={`truncate ${isPlaceholder ? "text-neutral-500" : "text-neutral-900"}`}>
           {display}
         </span>
         <span className="text-neutral-400 text-xs shrink-0">{open ? "▴" : "▾"}</span>
@@ -90,25 +123,29 @@ export default function PartSearchSelect({
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={`Search ${label.toLowerCase()}…`}
+              placeholder={label ? `Search ${label.toLowerCase()}…` : "Search…"}
               className="w-full bg-surface-light border border-border rounded-md px-2.5 py-1.5 text-sm"
             />
           </div>
           <ul className="max-h-48 overflow-y-auto py-1" role="listbox">
-            <li>
-              <button
-                type="button"
-                onClick={() => {
-                  onChange(NONE_PART);
-                  onClose();
-                }}
-                className={`w-full text-left px-3 py-2 text-sm hover:bg-brand-50 ${
-                  display === NONE_PART ? "bg-brand-50 font-medium text-brand-700" : "text-neutral-600"
-                }`}
-              >
-                None
-              </button>
-            </li>
+            {allowNone && (
+              <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange(NONE_PART);
+                    onClose();
+                  }}
+                  className={`w-full text-left px-3 py-2 text-sm hover:bg-brand-50 ${
+                    value === NONE_PART || !value
+                      ? "bg-brand-50 font-medium text-brand-700"
+                      : "text-neutral-600"
+                  }`}
+                >
+                  None
+                </button>
+              </li>
+            )}
             {filtered.map((option) => (
               <li key={option}>
                 <button
@@ -118,7 +155,7 @@ export default function PartSearchSelect({
                     onClose();
                   }}
                   className={`w-full text-left px-3 py-2 text-sm hover:bg-brand-50 ${
-                    display === option ? "bg-brand-50 font-medium text-brand-700" : "text-neutral-800"
+                    value === option ? "bg-brand-50 font-medium text-brand-700" : "text-neutral-800"
                   }`}
                 >
                   {option}
@@ -128,8 +165,35 @@ export default function PartSearchSelect({
             {filtered.length === 0 && (
               <li className="px-3 py-2 text-sm text-neutral-500">No matching models</li>
             )}
+            {allowOther && (
+              <li className="border-t border-border mt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange(otherMode && value !== OTHER_PART ? value : OTHER_PART);
+                    onClose();
+                  }}
+                  className={`w-full text-left px-3 py-2 text-sm hover:bg-brand-50 ${
+                    otherMode ? "bg-brand-50 font-medium text-brand-700" : "text-neutral-600"
+                  }`}
+                >
+                  Other
+                </button>
+              </li>
+            )}
           </ul>
         </div>
+      )}
+
+      {otherMode && (
+        <input
+          ref={customRef}
+          type="text"
+          value={value === OTHER_PART ? "" : value}
+          onChange={(e) => onChange(e.target.value.trim() ? e.target.value : OTHER_PART)}
+          placeholder="Enter part name"
+          className="mt-1.5 w-full bg-white border border-border rounded-lg px-3 py-2 text-sm"
+        />
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PART_CATEGORIES, partCategoryLabel, type BuildQuote, type BuildQuotePart } from "@/lib/types";
 import {
@@ -10,6 +10,12 @@ import {
   normalizeQuote,
   quoteTotal,
 } from "@/lib/build-quotes";
+import { partOptions } from "@/lib/owned-parts";
+import PartSearchSelect from "@/components/PartSearchSelect";
+
+export type BuildQuoteEditorHandle = {
+  saveAll: () => Promise<string | null>;
+};
 
 interface BuildQuoteEditorProps {
   buildRequestId: string;
@@ -30,17 +36,14 @@ function toDraft(quote: BuildQuote): DraftState {
   };
 }
 
-export default function BuildQuoteEditor({
-  buildRequestId,
-  onUseAsEstimate,
-}: BuildQuoteEditorProps) {
+export default forwardRef<BuildQuoteEditorHandle, BuildQuoteEditorProps>(
+  function BuildQuoteEditor({ buildRequestId, onUseAsEstimate }, ref) {
   const supabase = useMemo(() => createClient(), []);
   const [quotes, setQuotes] = useState<BuildQuote[]>([]);
   const [drafts, setDrafts] = useState<Record<string, DraftState>>({});
-  const [savingId, setSavingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
-  const [savedId, setSavedId] = useState<string | null>(null);
+  const [openPartKey, setOpenPartKey] = useState<string | null>(null);
 
   const loadQuotes = useCallback(async () => {
     const { data, error: fetchError } = await supabase
@@ -81,7 +84,6 @@ export default function BuildQuoteEditor({
       ...current,
       [id]: { ...current[id], ...patch },
     }));
-    setSavedId((current) => (current === id ? null : current));
   }
 
   function updatePart(quoteId: string, partId: string, patch: Partial<BuildQuotePart>) {
@@ -132,31 +134,34 @@ export default function BuildQuoteEditor({
     setAdding(false);
   }
 
-  async function saveDraft(id: string) {
-    const draft = drafts[id];
-    if (!draft) return;
-
-    setSavingId(id);
+  const saveAll = useCallback(async (): Promise<string | null> => {
     setError("");
+    const now = new Date().toISOString();
 
-    const { error: updateError } = await supabase
-      .from("build_quotes")
-      .update({
-        title: draft.title.trim() || "Draft",
-        notes: draft.notes,
-        parts: draft.parts,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id);
+    for (const quote of quotes) {
+      const draft = drafts[quote.id];
+      if (!draft) continue;
 
-    if (updateError) {
-      setError(updateError.message);
-    } else {
-      setSavedId(id);
+      const { error: updateError } = await supabase
+        .from("build_quotes")
+        .update({
+          title: draft.title.trim() || "Draft",
+          notes: draft.notes,
+          parts: draft.parts,
+          updated_at: now,
+        })
+        .eq("id", quote.id);
+
+      if (updateError) {
+        setError(updateError.message);
+        return updateError.message;
+      }
     }
 
-    setSavingId(null);
-  }
+    return null;
+  }, [quotes, drafts, supabase]);
+
+  useImperativeHandle(ref, () => ({ saveAll }), [saveAll]);
 
   async function deleteDraft(id: string) {
     if (!confirm("Delete this draft? The customer will no longer see it.")) return;
@@ -239,85 +244,94 @@ export default function BuildQuoteEditor({
             </div>
 
             <div className="space-y-3">
-              <div className="hidden sm:grid sm:grid-cols-12 gap-2 text-xs text-neutral-500 px-0.5">
-                <span className="col-span-2">Category</span>
-                <span className="col-span-4">Item</span>
-                <span className="col-span-2">Price (CAD)</span>
-                <span className="col-span-3">Product link</span>
-                <span className="col-span-1" />
-              </div>
-
-              {draft.parts.map((part) => (
-                <div
-                  key={part.id}
-                  className="grid grid-cols-1 sm:grid-cols-12 gap-2 bg-white sm:bg-transparent border sm:border-0 border-border rounded-lg p-3 sm:p-0"
-                >
-                  <select
-                    value={
-                      PART_CATEGORIES.includes(
-                        part.category as (typeof PART_CATEGORIES)[number]
-                      )
-                        ? part.category
-                        : "Other"
-                    }
-                    onChange={(e) =>
-                      updatePart(quote.id, part.id, { category: e.target.value })
-                    }
-                    className="sm:col-span-2 min-w-0 bg-white border border-border rounded-lg px-2 py-2 text-sm"
-                    title={part.category}
+              {draft.parts.map((part) => {
+                const partKey = `${quote.id}-${part.id}`;
+                return (
+                  <div
+                    key={part.id}
+                    className="bg-white border border-border rounded-lg p-3 space-y-2"
                   >
-                    {PART_CATEGORIES.map((category) => (
-                      <option key={category} value={category}>
-                        {partCategoryLabel(category)}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="text"
-                    value={part.name}
-                    onChange={(e) =>
-                      updatePart(quote.id, part.id, { name: e.target.value })
-                    }
-                    placeholder="Product name"
-                    className="sm:col-span-4 bg-white border border-border rounded-lg px-3 py-2 text-sm"
-                  />
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={part.price ?? ""}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      const parsed = parseFloat(value);
-                      updatePart(quote.id, part.id, {
-                        price: value === "" || Number.isNaN(parsed) ? null : parsed,
-                      });
-                    }}
-                    placeholder="0.00"
-                    className="sm:col-span-2 bg-white border border-border rounded-lg px-3 py-2 text-sm"
-                  />
-                  <input
-                    type="text"
-                    value={part.url}
-                    onChange={(e) =>
-                      updatePart(quote.id, part.id, { url: e.target.value })
-                    }
-                    placeholder="https://…"
-                    className="sm:col-span-3 bg-white border border-border rounded-lg px-3 py-2 text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateDraft(quote.id, {
-                        parts: draft.parts.filter((row) => row.id !== part.id),
-                      })
-                    }
-                    className="sm:col-span-1 text-sm text-red-600 hover:text-red-700 py-2"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
+                    <div className="flex flex-col sm:flex-row gap-2 sm:items-start">
+                      <select
+                        value={
+                          PART_CATEGORIES.includes(
+                            part.category as (typeof PART_CATEGORIES)[number]
+                          )
+                            ? part.category
+                            : "Other"
+                        }
+                        onChange={(e) =>
+                          updatePart(quote.id, part.id, { category: e.target.value })
+                        }
+                        className="sm:w-28 shrink-0 bg-white border border-border rounded-lg px-2 py-2.5 text-sm"
+                        title={part.category}
+                      >
+                        {PART_CATEGORIES.map((category) => (
+                          <option key={category} value={category}>
+                            {partCategoryLabel(category)}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="flex-1 min-w-0">
+                        <PartSearchSelect
+                          value={part.name}
+                          options={partOptions(part.category)}
+                          open={openPartKey === partKey}
+                          onToggle={() =>
+                            setOpenPartKey((current) =>
+                              current === partKey ? null : partKey
+                            )
+                          }
+                          onClose={() => setOpenPartKey(null)}
+                          onChange={(next) =>
+                            updatePart(quote.id, part.id, { name: next })
+                          }
+                          allowNone={false}
+                          allowOther
+                          placeholder="Select a model…"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateDraft(quote.id, {
+                            parts: draft.parts.filter((row) => row.id !== part.id),
+                          })
+                        }
+                        className="sm:self-start text-sm text-red-600 hover:text-red-700 py-2 shrink-0"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={part.price ?? ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const parsed = parseFloat(value);
+                          updatePart(quote.id, part.id, {
+                            price: value === "" || Number.isNaN(parsed) ? null : parsed,
+                          });
+                        }}
+                        placeholder="Price (CAD)"
+                        className="bg-white border border-border rounded-lg px-3 py-2 text-sm"
+                      />
+                      <input
+                        type="text"
+                        value={part.url}
+                        onChange={(e) =>
+                          updatePart(quote.id, part.id, { url: e.target.value })
+                        }
+                        placeholder="Product link (https://…)"
+                        className="bg-white border border-border rounded-lg px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             <button
@@ -359,18 +373,6 @@ export default function BuildQuoteEditor({
                 >
                   Delete
                 </button>
-                <button
-                  type="button"
-                  onClick={() => saveDraft(quote.id)}
-                  disabled={savingId === quote.id}
-                  className="px-4 py-2 bg-neutral-950 hover:bg-neutral-800 disabled:opacity-50 text-white text-sm font-medium rounded-lg"
-                >
-                  {savingId === quote.id
-                    ? "Saving…"
-                    : savedId === quote.id
-                      ? "Saved"
-                      : "Save draft"}
-                </button>
               </div>
             </div>
           </div>
@@ -378,4 +380,4 @@ export default function BuildQuoteEditor({
       })}
     </div>
   );
-}
+});

@@ -1,4 +1,4 @@
-import { PART_CATEGORIES, type BuildQuote, type BuildQuotePart } from "@/lib/types";
+import { NONE_PART, OTHER_PART, PART_CATEGORIES, type BuildQuote, type BuildQuotePart } from "@/lib/types";
 
 export function newPartId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -62,8 +62,15 @@ export function quoteTotal(parts: BuildQuotePart[]): number {
   return parts.reduce((sum, part) => sum + (part.price ?? 0), 0);
 }
 
+export function hasPartName(name: string): boolean {
+  const trimmed = name.trim();
+  return trimmed !== "" && trimmed !== NONE_PART && trimmed !== OTHER_PART;
+}
+
 export function visibleParts(parts: BuildQuotePart[]): BuildQuotePart[] {
-  return parts.filter((part) => part.name.trim() || part.price != null || part.url.trim());
+  return parts.filter(
+    (part) => hasPartName(part.name) || part.price != null || part.url.trim()
+  );
 }
 
 export function formatCad(amount: number | null | undefined): string {

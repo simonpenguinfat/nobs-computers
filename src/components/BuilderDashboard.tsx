@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { BUILD_STATUSES, isArchivedStatus } from "@/lib/types";
 import type { BuildRequest, Profile } from "@/lib/types";
 import ChatBox from "./ChatBox";
-import BuildQuoteEditor from "./BuildQuoteEditor";
+import BuildQuoteEditor, { type BuildQuoteEditorHandle } from "./BuildQuoteEditor";
 import OwnedPartsSummary from "./OwnedPartsSummary";
 
 interface ClientWithProfile extends BuildRequest {
@@ -30,6 +30,10 @@ export default function BuilderDashboard({
   const [activeTab, setActiveTab] = useState<DetailTab>("build");
   const [updating, setUpdating] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [saveOk, setSaveOk] = useState(false);
+  const [draftStatus, setDraftStatus] = useState<BuildRequest["status"]>("pending");
+  const [draftEstimate, setDraftEstimate] = useState("");
+  const quoteEditorRef = useRef<BuildQuoteEditorHandle>(null);
   const supabase = useMemo(() => createClient(), []);
 
   const selected = clients.find((c) => c.id === selectedId) ?? null;
@@ -44,6 +48,14 @@ export default function BuilderDashboard({
     const client = clients.find((c) => c.id === clientId);
     setSelectedId(clientId);
     setActiveTab(client?.status === "pending" ? "chat" : "build");
+    if (client) {
+      setDraftStatus(client.status);
+      setDraftEstimate(
+        client.estimated_cost != null ? String(client.estimated_cost) : ""
+      );
+    }
+    setSaveOk(false);
+    setActionError("");
   }
 
   function closeClient() {
@@ -142,19 +154,92 @@ export default function BuilderDashboard({
     await updateStatus(requestId, "cancelled");
   }
 
-  async function updateEstimate(requestId: string, cost: number) {
-    const { data } = await supabase
-      .from("build_requests")
-      .update({ estimated_cost: cost, updated_at: new Date().toISOString() })
-      .eq("id", requestId)
-      .select("*, profiles!buyer_id(*)")
-      .single();
+  async function saveChanges() {
+    if (!selected) return;
 
-    if (data) {
-      setClients((prev) =>
-        prev.map((c) => (c.id === requestId ? (data as ClientWithProfile) : c))
-      );
+    setUpdating(true);
+    setActionError("");
+    setSaveOk(false);
+
+    const draftError = await quoteEditorRef.current?.saveAll();
+    if (draftError) {
+      setActionError(draftError);
+      setUpdating(false);
+      return;
     }
+
+    const payload: {
+      updated_at: string;
+      estimated_cost?: number | null;
+      status?: BuildRequest["status"];
+    } = {
+      updated_at: new Date().toISOString(),
+    };
+
+    const estimate = draftEstimate.trim() === "" ? null : parseFloat(draftEstimate);
+    if (draftEstimate.trim() !== "" && (estimate == null || Number.isNaN(estimate))) {
+      setActionError("Enter a valid estimated cost, or leave it blank.");
+      setUpdating(false);
+      return;
+    }
+    payload.estimated_cost = estimate == null || Number.isNaN(estimate) ? null : estimate;
+
+    if (selected.status !== "pending") {
+      if (draftStatus === "not_received") {
+        setActionError("Only the customer can mark a build as not received.");
+        setUpdating(false);
+        return;
+      }
+
+      if (draftStatus === "cancelled") {
+        if (!confirm("Cancel this order? It will be removed from your dashboard.")) {
+          setUpdating(false);
+          return;
+        }
+      }
+
+      payload.status = draftStatus;
+    }
+
+    const { data, error } = await supabase
+      .from("build_requests")
+      .update(payload)
+      .eq("id", selected.id)
+      .select("*")
+      .maybeSingle();
+
+    if (error) {
+      setActionError(formatStatusError(error.message));
+      setUpdating(false);
+      return;
+    }
+
+    if (!data) {
+      setActionError(
+        "Could not save this order. It may have already changed — refresh the page."
+      );
+      setUpdating(false);
+      return;
+    }
+
+    const nextStatus = (data as BuildRequest).status;
+    if (isArchivedStatus(nextStatus)) {
+      removeClient(selected.id);
+    } else {
+      setClients((prev) =>
+        prev.map((c) => {
+          if (c.id !== selected.id) return c;
+          return { ...c, ...(data as BuildRequest) };
+        })
+      );
+      setDraftStatus(nextStatus);
+      setDraftEstimate(
+        data.estimated_cost != null ? String(data.estimated_cost) : ""
+      );
+      setSaveOk(true);
+    }
+
+    setUpdating(false);
   }
 
   const pendingCount = clients.filter((c) => c.status === "pending").length;
@@ -392,21 +477,19 @@ export default function BuilderDashboard({
                         </div>
                       )}
 
-                      {selected.status !== "pending" && (
-                        <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-end">
+                      <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-end mb-4">
+                        {selected.status !== "pending" && (
                           <div className="flex-1 sm:flex-none">
                             <label className="text-xs text-neutral-500 block mb-1">
                               Status
                             </label>
                             <select
-                              value={selected.status}
+                              value={draftStatus}
                               disabled={updating}
-                              onChange={(e) =>
-                                updateStatus(
-                                  selected.id,
-                                  e.target.value as BuildRequest["status"]
-                                )
-                              }
+                              onChange={(e) => {
+                                setDraftStatus(e.target.value as BuildRequest["status"]);
+                                setSaveOk(false);
+                              }}
                               className="w-full sm:w-auto bg-white border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-neutral-400"
                             >
                               {Object.entries(BUILD_STATUSES)
@@ -426,30 +509,51 @@ export default function BuilderDashboard({
                                 ))}
                             </select>
                           </div>
-                          <div className="flex-1 sm:flex-none">
-                            <label className="text-xs text-neutral-500 block mb-1">
-                              Estimated Cost (CAD)
-                            </label>
-                            <input
-                              key={String(selected.estimated_cost ?? "empty")}
-                              type="number"
-                              defaultValue={selected.estimated_cost ?? ""}
-                              onBlur={(e) => {
-                                const val = parseFloat(e.target.value);
-                                if (!isNaN(val)) updateEstimate(selected.id, val);
-                              }}
-                              placeholder="Enter quote"
-                              className="w-full sm:w-36 bg-white border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-neutral-400"
-                            />
-                          </div>
+                        )}
+                        <div className="flex-1 sm:flex-none">
+                          <label className="text-xs text-neutral-500 block mb-1">
+                            Estimated Cost (CAD)
+                          </label>
+                          <input
+                            type="number"
+                            value={draftEstimate}
+                            onChange={(e) => {
+                              setDraftEstimate(e.target.value);
+                              setSaveOk(false);
+                            }}
+                            placeholder="Enter quote"
+                            className="w-full sm:w-36 bg-white border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-neutral-400"
+                          />
                         </div>
+                      </div>
+
+                      {actionError && (
+                        <p className="text-sm text-red-700 mb-3">{actionError}</p>
                       )}
 
                       <BuildQuoteEditor
                         key={selected.id}
+                        ref={quoteEditorRef}
                         buildRequestId={selected.id}
-                        onUseAsEstimate={(total) => updateEstimate(selected.id, total)}
+                        onUseAsEstimate={(total) => {
+                          setDraftEstimate(total.toFixed(2));
+                          setSaveOk(false);
+                        }}
                       />
+
+                      <button
+                        type="button"
+                        onClick={() => saveChanges()}
+                        disabled={updating}
+                        className="mt-4 w-full py-3 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-semibold rounded-lg text-sm transition-colors"
+                      >
+                        {updating ? "Saving…" : "Save changes"}
+                      </button>
+                      {saveOk && (
+                        <p className="text-sm text-green-700 mt-2 text-center">
+                          Changes saved.
+                        </p>
+                      )}
 
                       {selected.status !== "pending" && (
                         <button

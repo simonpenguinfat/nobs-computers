@@ -36,9 +36,7 @@ export const PART_CATEGORIES = [
 
 export type PartCategory = (typeof PART_CATEGORIES)[number];
 
-export const OWNABLE_PART_CATEGORIES = PART_CATEGORIES.filter(
-  (category) => category !== "Other"
-);
+export const OWNABLE_PART_CATEGORIES = PART_CATEGORIES;
 
 export const PART_CATEGORY_SHORT: Record<string, string> = {
   CPU: "CPU",
@@ -58,6 +56,7 @@ export function partCategoryLabel(category: string): string {
 }
 
 export const NONE_PART = "None";
+export const OTHER_PART = "Other";
 
 export interface BuildQuotePart {
   id: string;
