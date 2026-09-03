@@ -5,6 +5,11 @@ export type BuildRequestDraft = {
   budget: number;
   existing_parts: string;
   preferences: string;
+  use_case_detail?: string;
+  priority?: string;
+  resolution?: string;
+  form_factor?: string;
+  notes?: string;
 };
 
 export function saveBuildRequestDraft(draft: BuildRequestDraft): void {

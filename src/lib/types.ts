@@ -198,3 +198,25 @@ export const USE_CASES = [
   "General Use",
   "Other",
 ];
+
+export const BUILD_PRIORITIES = [
+  "Max performance",
+  "Best value",
+  "Quiet operation",
+  "Looks / RGB",
+  "Future upgrades",
+] as const;
+
+export const DISPLAY_TARGETS = [
+  "1080p",
+  "1440p",
+  "4K",
+  "Not sure / N/A",
+] as const;
+
+export const FORM_FACTORS = [
+  "Compact / small",
+  "Standard mid-tower",
+  "Full size",
+  "No preference",
+] as const;

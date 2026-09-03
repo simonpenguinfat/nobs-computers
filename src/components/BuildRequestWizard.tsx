@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import BuildRequestForm, {
   draftFromFormValues,
+  EMPTY_FORM_VALUES,
   formValuesFromDraft,
   type BuildRequestFormValues,
 } from "@/components/BuildRequestForm";
@@ -66,9 +67,7 @@ export default function BuildRequestWizard() {
   const initialDraft = loadBuildRequestDraft();
   const [step, setStep] = useState<Step>(initialDraft ? "account" : "questionnaire");
   const [formValues, setFormValues] = useState<BuildRequestFormValues>(
-    initialDraft
-      ? formValuesFromDraft(initialDraft)
-      : { useCase: "", budget: "", existingParts: "", preferences: "" }
+    initialDraft ? formValuesFromDraft(initialDraft) : EMPTY_FORM_VALUES
   );
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -117,12 +116,7 @@ export default function BuildRequestWizard() {
     }
 
     if (data.session && data.user) {
-      await ensureBuyerProfile(
-        supabase,
-        data.user.id,
-        email,
-        fullName
-      );
+      await ensureBuyerProfile(supabase, data.user.id, email, fullName);
 
       const result = await submitBuildRequest(supabase, data.user.id, draft);
       if (result.error) {
@@ -138,25 +132,38 @@ export default function BuildRequestWizard() {
     setLoading(false);
   }
 
+  const summaryBits = [
+    formValues.useCase || null,
+    formValues.budget ? `$${formValues.budget} CAD` : null,
+    formValues.priority || null,
+    formValues.resolution || null,
+  ].filter(Boolean);
+
   return (
     <div className="max-w-xl mx-auto">
       <div className="flex items-center gap-2 mb-8">
         <div
-          className={`flex-1 h-1 rounded-full ${step === "questionnaire" ? "bg-brand-600" : "bg-brand-200"}`}
+          className={`flex-1 h-1 rounded-full ${
+            step === "questionnaire" ? "bg-brand-600" : "bg-brand-200"
+          }`}
         />
         <div
-          className={`flex-1 h-1 rounded-full ${step === "account" || step === "verify" ? "bg-brand-600" : "bg-neutral-200"}`}
+          className={`flex-1 h-1 rounded-full ${
+            step === "account" || step === "verify"
+              ? "bg-brand-600"
+              : "bg-neutral-200"
+          }`}
         />
       </div>
 
       {step === "questionnaire" && (
         <div className="bg-white border border-border rounded-2xl p-6 sm:p-8 shadow-sm">
           <h1 className="text-2xl sm:text-3xl font-bold text-neutral-950 mb-2">
-            Build My PC
+            Find your best-fit PC
           </h1>
           <p className="text-neutral-600 text-sm sm:text-base mb-6">
-            Tell us what you need. No account required yet — we&apos;ll ask for a
-            password on the next step so you can track your build and chat with us.
+            A few short steps — no account needed yet. We&apos;ll ask for a password
+            at the end so you can track your build and chat with us.
           </p>
           <BuildRequestForm
             values={formValues}
@@ -166,7 +173,10 @@ export default function BuildRequestWizard() {
           />
           <p className="text-center text-sm text-neutral-500 mt-6">
             Already have an account?{" "}
-            <Link href="/login?redirect=/buyer" className="text-brand-600 font-semibold hover:text-brand-500">
+            <Link
+              href="/login?redirect=/buyer"
+              className="text-brand-600 font-semibold hover:text-brand-500"
+            >
               Log in
             </Link>
           </p>
@@ -180,19 +190,25 @@ export default function BuildRequestWizard() {
             onClick={() => setStep("questionnaire")}
             className="text-sm text-neutral-500 hover:text-neutral-800 mb-4"
           >
-            ← Edit your request
+            ← Edit your answers
           </button>
           <h1 className="text-2xl sm:text-3xl font-bold text-neutral-950 mb-2">
             Create a password to track your build
           </h1>
           <p className="text-neutral-600 text-sm sm:text-base mb-6">
-            Your request is saved. Set up a free account so you can follow progress,
+            Your answers are saved. Set up a free account so you can follow progress,
             chat with us, and get updates.
           </p>
 
-          <div className="mb-6 p-4 bg-brand-50 border border-brand-100 rounded-xl text-sm text-neutral-700">
-            <p className="font-medium text-neutral-900 mb-1">Your request summary</p>
-            <p>{formValues.useCase || "—"} · ${formValues.budget || "0"} CAD</p>
+          <div className="mb-6 p-4 bg-brand-50 border border-brand-100 rounded-xl text-sm text-neutral-700 space-y-1">
+            <p className="font-medium text-neutral-900">Your request summary</p>
+            <p>{summaryBits.join(" · ") || "—"}</p>
+            {formValues.useCaseDetail.trim() ? (
+              <p className="text-neutral-600">{formValues.useCaseDetail.trim()}</p>
+            ) : null}
+            {formValues.formFactor ? (
+              <p className="text-neutral-600">Case: {formValues.formFactor}</p>
+            ) : null}
           </div>
 
           <form onSubmit={handleAccountSubmit} className="space-y-4">
