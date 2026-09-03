@@ -33,7 +33,7 @@ export function HomePromises() {
       <div className="max-w-6xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
           <div className="flex justify-center mb-5">
-            <NbMonogram className="h-12 sm:h-14 w-auto" />
+            <NbMonogram className="h-10 sm:h-12 w-auto" />
           </div>
           <SectionLabel>Why No BS</SectionLabel>
           <h2 className="text-2xl sm:text-3xl font-bold text-neutral-950">
@@ -46,7 +46,7 @@ export function HomePromises() {
               key={item.title}
               className="bg-surface-light border border-border rounded-2xl p-6 sm:p-7"
             >
-              <NbMonogram className="h-9 w-auto mb-4" />
+              <NbMonogram className="h-8 w-auto mb-4" />
               <h3 className="font-bold text-lg text-neutral-950 mb-2">{item.title}</h3>
               <p className="text-neutral-600 text-sm leading-relaxed">{item.description}</p>
             </div>
