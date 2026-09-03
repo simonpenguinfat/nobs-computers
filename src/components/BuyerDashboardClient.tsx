@@ -14,6 +14,7 @@ import ChatBox from "./ChatBox";
 import PendingDraftSubmit from "./PendingDraftSubmit";
 import BuyerBuildQuotes from "./BuyerBuildQuotes";
 import OutcomeNotice from "./OutcomeNotice";
+import BuildProgressBar from "./BuildProgressBar";
 
 interface BuyerDashboardProps {
   userId: string;
@@ -205,6 +206,33 @@ export default function BuyerDashboardClient({
 
   return (
     <div className="space-y-4">
+      <div className="mb-2 sm:mb-4 space-y-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">My Build</h1>
+            <p className="text-neutral-500 text-sm mt-1">
+              Tell us what you need and track your custom PC build.
+            </p>
+          </div>
+          <div className="w-full lg:w-auto lg:min-w-[14rem] rounded-xl border border-brand-200 bg-brand-50 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">
+              Estimated price
+            </p>
+            <p className="text-2xl font-bold text-neutral-950 mt-0.5 tabular-nums">
+              {request?.estimated_cost != null
+                ? `$${request.estimated_cost.toLocaleString()} CAD`
+                : "Pending quote"}
+            </p>
+            {request?.budget ? (
+              <p className="text-xs text-neutral-600 mt-1">
+                Your budget: ${request.budget.toLocaleString()} CAD
+              </p>
+            ) : null}
+          </div>
+        </div>
+        <BuildProgressBar request={request} />
+      </div>
+
       <PendingDraftSubmit />
 
       <div className="bg-surface-card border border-border rounded-xl">

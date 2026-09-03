@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { BUILD_STATUSES, isArchivedStatus, needsAdminOutcomeAck, staysOnAdminDashboard } from "@/lib/types";
+import { BUILD_PROGRESS_STAGES, BUILD_STATUSES, isArchivedStatus, needsAdminOutcomeAck, resolveBuildStage, staysOnAdminDashboard, type BuildProgressStage } from "@/lib/types";
 import type { BuildRequest, Profile } from "@/lib/types";
 import ChatBox from "./ChatBox";
 import BuildQuoteEditor, { type BuildQuoteEditorHandle } from "./BuildQuoteEditor";
@@ -35,6 +35,7 @@ export default function BuilderDashboard({
   const [actionError, setActionError] = useState("");
   const [saveOk, setSaveOk] = useState(false);
   const [draftStatus, setDraftStatus] = useState<BuildRequest["status"]>("pending");
+  const [draftStage, setDraftStage] = useState<BuildProgressStage>("review");
   const [draftEstimate, setDraftEstimate] = useState("");
   const [showDeclineForm, setShowDeclineForm] = useState(false);
   const [showCancelForm, setShowCancelForm] = useState(false);
@@ -56,6 +57,7 @@ export default function BuilderDashboard({
     setActiveTab(client?.status === "pending" ? "parts" : "drafts");
     if (client) {
       setDraftStatus(client.status);
+      setDraftStage(resolveBuildStage(client));
       setDraftEstimate(
         client.estimated_cost != null ? String(client.estimated_cost) : ""
       );
@@ -89,9 +91,10 @@ export default function BuilderDashboard({
     if (
       lower.includes("decline_reason") ||
       lower.includes("closed_by") ||
-      lower.includes("outcome_acknowledged")
+      lower.includes("outcome_acknowledged") ||
+      lower.includes("build_stage")
     ) {
-      return "Run outcome-ack.sql in the Supabase SQL Editor, then try again.";
+      return "Run build-progress.sql (and outcome-ack.sql if needed) in the Supabase SQL Editor, then try again.";
     }
 
     if (
@@ -169,8 +172,10 @@ export default function BuilderDashboard({
   async function acceptOrder(requestId: string) {
     const ok = await updateStatus(requestId, "in_progress", {
       onlyFromStatus: "pending",
+      extra: { build_stage: "draft" },
     });
     if (ok) {
+      setDraftStage("draft");
       setActiveTab("drafts");
     }
   }
@@ -292,6 +297,7 @@ export default function BuilderDashboard({
       updated_at: string;
       estimated_cost?: number | null;
       status?: BuildRequest["status"];
+      build_stage?: BuildProgressStage;
     } = {
       updated_at: new Date().toISOString(),
     };
@@ -319,6 +325,15 @@ export default function BuilderDashboard({
       }
 
       payload.status = draftStatus;
+      if (draftStatus === "completed") {
+        payload.build_stage = "ready";
+        setDraftStage("ready");
+      } else {
+        payload.build_stage = draftStage;
+      }
+    } else {
+      // Pending review — keep stage on review unless admin already moved it
+      payload.build_stage = "review";
     }
 
     const { data, error } = await supabase
@@ -353,6 +368,7 @@ export default function BuilderDashboard({
         })
       );
       setDraftStatus(nextStatus);
+      setDraftStage(resolveBuildStage(data as BuildRequest));
       setDraftEstimate(
         data.estimated_cost != null ? String(data.estimated_cost) : ""
       );
@@ -717,6 +733,26 @@ export default function BuilderDashboard({
                             </select>
                           </div>
                         )}
+                        <div className="flex-1 sm:flex-none">
+                          <label className="text-xs text-neutral-500 block mb-1">
+                            Progress stage
+                          </label>
+                          <select
+                            value={draftStage}
+                            disabled={updating || selected.status === "pending"}
+                            onChange={(e) => {
+                              setDraftStage(e.target.value as BuildProgressStage);
+                              setSaveOk(false);
+                            }}
+                            className="w-full sm:w-44 bg-white border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-neutral-400 disabled:opacity-60"
+                          >
+                            {BUILD_PROGRESS_STAGES.map((stage) => (
+                              <option key={stage.id} value={stage.id}>
+                                {stage.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                         <div className="flex-1 sm:flex-none">
                           <label className="text-xs text-neutral-500 block mb-1">
                             Estimated Cost (CAD)

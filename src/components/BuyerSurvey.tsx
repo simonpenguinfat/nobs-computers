@@ -77,7 +77,7 @@ export default function BuyerSurvey({
     } else {
       const { data, error: insertError } = await supabase
         .from("build_requests")
-        .insert({ ...payload, buyer_id: userId, status: "pending" })
+        .insert({ ...payload, buyer_id: userId, status: "pending", build_stage: "review" })
         .select()
         .single();
 

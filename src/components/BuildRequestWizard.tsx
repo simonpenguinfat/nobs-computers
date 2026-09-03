@@ -52,6 +52,7 @@ async function submitBuildRequest(
       ...payload,
       buyer_id: userId,
       status: "pending",
+      build_stage: "review",
     });
     if (error) return { error: formatBuildRequestError(error.message) };
   }

@@ -47,12 +47,6 @@ export default async function BuyerPage() {
     <>
       <NavbarAuth />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">My Build</h1>
-          <p className="text-neutral-500 text-sm mt-1">
-            Tell us what you need and track your custom PC build.
-          </p>
-        </div>
         <BuyerDashboardClient
           userId={user.id}
           userName={profile?.full_name ?? user.user_metadata?.full_name ?? "Guest"}

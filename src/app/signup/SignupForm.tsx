@@ -69,6 +69,7 @@ export default function SignupForm() {
           ...payload,
           buyer_id: data.user.id,
           status: "pending",
+          build_stage: "review",
         });
         if (!insertError) {
           clearBuildRequestDraft();

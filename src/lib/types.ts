@@ -17,6 +17,7 @@ export interface BuildRequest {
   preferences: string;
   status: "pending" | "in_progress" | "completed" | "cancelled" | "confirmed" | "not_received" | "rejected";
   estimated_cost: number | null;
+  build_stage?: BuildProgressStage | null;
   needs_review?: boolean;
   review_kind?: "new" | "updated" | null;
   decline_reason?: string | null;
@@ -155,6 +156,45 @@ export const BUILD_STATUSES = {
   rejected: { label: "Declined", color: "text-red-700 bg-red-50" },
   confirmed: { label: "Confirmed", color: "text-neutral-500 bg-neutral-100" },
 } as const;
+
+export const BUILD_PROGRESS_STAGES = [
+  { id: "request", label: "Request" },
+  { id: "review", label: "Review" },
+  { id: "draft", label: "Draft" },
+  { id: "approval", label: "Approval" },
+  { id: "parts_ordered", label: "Parts Ordered" },
+  { id: "building", label: "Building" },
+  { id: "testing", label: "Testing" },
+  { id: "ready", label: "Ready" },
+] as const;
+
+export type BuildProgressStage = (typeof BUILD_PROGRESS_STAGES)[number]["id"];
+
+export function isBuildProgressStage(value: string | null | undefined): value is BuildProgressStage {
+  return BUILD_PROGRESS_STAGES.some((stage) => stage.id === value);
+}
+
+export function resolveBuildStage(
+  request: BuildRequest | null | undefined
+): BuildProgressStage {
+  if (!request) return "request";
+  if (isBuildProgressStage(request.build_stage ?? null)) {
+    return request.build_stage as BuildProgressStage;
+  }
+  if (request.status === "pending") return "review";
+  if (
+    request.status === "completed" ||
+    request.status === "not_received" ||
+    request.status === "confirmed"
+  ) {
+    return "ready";
+  }
+  return "draft";
+}
+
+export function buildStageIndex(stage: BuildProgressStage): number {
+  return BUILD_PROGRESS_STAGES.findIndex((item) => item.id === stage);
+}
 
 export const ACTIVE_STATUSES = [
   "pending",

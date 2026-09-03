@@ -46,15 +46,7 @@ export default function BuildStatusCard({ request, onRequestUpdated }: BuildStat
             {request.budget ? `$${request.budget.toLocaleString()}` : "—"}
           </p>
         </div>
-        <div>
-          <p className="text-xs text-neutral-500 mb-0.5">Estimated Cost</p>
-          <p className="text-sm font-medium text-neutral-800">
-            {request.estimated_cost
-              ? `$${request.estimated_cost.toLocaleString()}`
-              : "Pending quote"}
-          </p>
-        </div>
-        <div>
+        <div className="col-span-2">
           <p className="text-xs text-neutral-500 mb-0.5">Submitted</p>
           <p className="text-sm font-medium text-neutral-900">
             {new Date(request.created_at).toLocaleDateString()}

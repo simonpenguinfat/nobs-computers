@@ -61,6 +61,7 @@ export default function PendingDraftSubmit() {
           ...payload,
           buyer_id: user.id,
           status: "pending",
+          build_stage: "review",
         });
         error = insertError?.message ?? null;
       }
