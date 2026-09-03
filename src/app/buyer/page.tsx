@@ -4,7 +4,7 @@ import BuyerDashboardClient from "@/components/BuyerDashboardClient";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/auth";
 import type { BuildRequest } from "@/lib/types";
-import { ACTIVE_STATUSES } from "@/lib/types";
+import { ACTIVE_STATUSES, needsBuyerOutcomeAck } from "@/lib/types";
 
 export default async function BuyerPage() {
   const supabase = await createClient();
@@ -30,16 +30,18 @@ export default async function BuyerPage() {
     .limit(1)
     .maybeSingle();
 
-  const { data: declinedRequest } = buildRequest
-    ? { data: null }
-    : await supabase
-        .from("build_requests")
-        .select("*")
-        .eq("buyer_id", user.id)
-        .eq("status", "rejected")
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+  const { data: closedRows } = await supabase
+    .from("build_requests")
+    .select("*")
+    .eq("buyer_id", user.id)
+    .in("status", ["rejected", "cancelled"])
+    .order("updated_at", { ascending: false })
+    .limit(5);
+
+  const initialOutcome =
+    ((closedRows as BuildRequest[] | null) ?? []).find((row) =>
+      needsBuyerOutcomeAck(row)
+    ) ?? null;
 
   return (
     <>
@@ -57,7 +59,7 @@ export default async function BuyerPage() {
           userEmail={user.email ?? profile?.email ?? ""}
           memberSince={profile?.created_at ?? user.created_at}
           initialRequest={(buildRequest as BuildRequest) ?? null}
-          initialDeclined={(declinedRequest as BuildRequest) ?? null}
+          initialOutcome={initialOutcome}
         />
       </div>
     </>

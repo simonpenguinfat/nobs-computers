@@ -20,6 +20,8 @@ export interface BuildRequest {
   needs_review?: boolean;
   review_kind?: "new" | "updated" | null;
   decline_reason?: string | null;
+  closed_by?: "builder" | "buyer" | null;
+  outcome_acknowledged?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -169,6 +171,22 @@ export const ARCHIVED_STATUSES = [
 
 export function isArchivedStatus(status: BuildRequest["status"]): boolean {
   return (ARCHIVED_STATUSES as readonly string[]).includes(status);
+}
+
+export function needsBuyerOutcomeAck(request: BuildRequest | null | undefined): boolean {
+  if (!request || request.outcome_acknowledged) return false;
+  if (request.status === "rejected") return request.closed_by !== "buyer";
+  if (request.status === "cancelled") return request.closed_by === "builder";
+  return false;
+}
+
+export function needsAdminOutcomeAck(request: BuildRequest | null | undefined): boolean {
+  if (!request || request.outcome_acknowledged) return false;
+  return request.status === "cancelled" && request.closed_by === "buyer";
+}
+
+export function staysOnAdminDashboard(request: BuildRequest): boolean {
+  return !isArchivedStatus(request.status) || needsAdminOutcomeAck(request);
 }
 
 export const USE_CASES = [

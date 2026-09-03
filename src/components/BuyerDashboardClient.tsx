@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { BuildRequest } from "@/lib/types";
-import { isArchivedStatus } from "@/lib/types";
+import {
+  isArchivedStatus,
+  needsBuyerOutcomeAck,
+} from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import BuyerSurvey from "./BuyerSurvey";
 import BuildStatusCard from "./BuildStatusCard";
@@ -10,6 +13,7 @@ import BuyerSettings from "./BuyerSettings";
 import ChatBox from "./ChatBox";
 import PendingDraftSubmit from "./PendingDraftSubmit";
 import BuyerBuildQuotes from "./BuyerBuildQuotes";
+import OutcomeNotice from "./OutcomeNotice";
 
 interface BuyerDashboardProps {
   userId: string;
@@ -17,7 +21,7 @@ interface BuyerDashboardProps {
   userEmail: string;
   memberSince: string;
   initialRequest: BuildRequest | null;
-  initialDeclined: BuildRequest | null;
+  initialOutcome: BuildRequest | null;
 }
 
 type DetailTab = "current" | "chat" | "update" | "settings";
@@ -30,9 +34,6 @@ function normalizeRequest(request: BuildRequest | null): BuildRequest | null {
 }
 
 function noticeForStatus(status: BuildRequest["status"]): string | null {
-  if (status === "cancelled") {
-    return "This build was cancelled. You can submit a new request below.";
-  }
   if (status === "confirmed") {
     return "Delivery confirmed. You can start a new request when you're ready.";
   }
@@ -42,24 +43,10 @@ function noticeForStatus(status: BuildRequest["status"]): string | null {
   return null;
 }
 
-function DeclinedNotice({ request }: { request: BuildRequest }) {
-  const reason = request.decline_reason?.trim();
-
-  return (
-    <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
-      <p className="text-sm font-semibold text-red-950">Your request was declined</p>
-      {reason ? (
-        <p className="mt-2 text-sm text-red-900 whitespace-pre-wrap">{reason}</p>
-      ) : (
-        <p className="mt-2 text-sm text-red-800">
-          No additional reason was provided.
-        </p>
-      )}
-      <p className="mt-2 text-sm text-red-800">
-        You can submit a new request from Update Build.
-      </p>
-    </div>
-  );
+function buyerOutcomeTitle(request: BuildRequest): string {
+  return request.status === "cancelled"
+    ? "Your request was cancelled"
+    : "Your request was declined";
 }
 
 export default function BuyerDashboardClient({
@@ -68,29 +55,34 @@ export default function BuyerDashboardClient({
   userEmail,
   memberSince,
   initialRequest,
-  initialDeclined,
+  initialOutcome,
 }: BuyerDashboardProps) {
   const supabase = useMemo(() => createClient(), []);
   const [request, setRequest] = useState<BuildRequest | null>(
     normalizeRequest(initialRequest)
   );
-  const [declinedRequest, setDeclinedRequest] = useState<BuildRequest | null>(
-    normalizeRequest(initialRequest) ? null : initialDeclined
+  const [outcomeRequest, setOutcomeRequest] = useState<BuildRequest | null>(
+    needsBuyerOutcomeAck(initialOutcome)
+      ? initialOutcome
+      : needsBuyerOutcomeAck(initialRequest)
+        ? initialRequest
+        : null
   );
   const [userName, setUserName] = useState(initialUserName);
   const [activeTab, setActiveTab] = useState<DetailTab>(
     normalizeRequest(initialRequest) ? "current" : "update"
   );
   const [statusNotice, setStatusNotice] = useState<string | null>(null);
+  const [acking, setAcking] = useState(false);
   const requestRef = useRef(request);
   requestRef.current = request;
 
   function applyRemoteRequest(updated: BuildRequest) {
     const previous = requestRef.current;
 
-    if (updated.status === "rejected") {
+    if (needsBuyerOutcomeAck(updated)) {
       setRequest(null);
-      setDeclinedRequest(updated);
+      setOutcomeRequest(updated);
       setStatusNotice(null);
       setActiveTab("update");
       return;
@@ -98,13 +90,18 @@ export default function BuyerDashboardClient({
 
     if (isArchivedStatus(updated.status)) {
       setRequest(null);
+      setOutcomeRequest((current) =>
+        updated.outcome_acknowledged && current?.id === updated.id
+          ? null
+          : current
+      );
       setActiveTab("update");
-      setStatusNotice(noticeForStatus(updated.status));
+      const notice = noticeForStatus(updated.status);
+      if (notice) setStatusNotice(notice);
       return;
     }
 
     setRequest(updated);
-    setDeclinedRequest(null);
 
     if (
       updated.status === "in_progress" &&
@@ -115,9 +112,9 @@ export default function BuyerDashboardClient({
   }
 
   function handleRequestUpdated(updated: BuildRequest | null) {
-    if (updated?.status === "rejected") {
+    if (needsBuyerOutcomeAck(updated)) {
       setRequest(null);
-      setDeclinedRequest(updated);
+      setOutcomeRequest(updated);
       setStatusNotice(null);
       setActiveTab("update");
       return;
@@ -127,7 +124,8 @@ export default function BuyerDashboardClient({
     if (!updated || isArchivedStatus(updated.status)) {
       setActiveTab("update");
       if (updated) {
-        setStatusNotice(noticeForStatus(updated.status));
+        const notice = noticeForStatus(updated.status);
+        if (notice) setStatusNotice(notice);
       }
     }
   }
@@ -135,11 +133,30 @@ export default function BuyerDashboardClient({
   function handleRequestSubmitted(newRequest: BuildRequest) {
     const active = normalizeRequest(newRequest);
     setRequest(active);
-    setDeclinedRequest(null);
     setStatusNotice(null);
     if (active) {
       setActiveTab("current");
     }
+  }
+
+  async function acknowledgeOutcome() {
+    if (!outcomeRequest) return;
+    setAcking(true);
+
+    const { data, error } = await supabase
+      .from("build_requests")
+      .update({
+        outcome_acknowledged: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", outcomeRequest.id)
+      .select("*")
+      .maybeSingle();
+
+    if (!error && data) {
+      setOutcomeRequest(null);
+    }
+    setAcking(false);
   }
 
   useEffect(() => {
@@ -206,9 +223,6 @@ export default function BuyerDashboardClient({
               className={tabClass("chat")}
             >
               Chat
-              {request?.status === "pending" && (
-                <span className="ml-1.5 text-amber-600">●</span>
-              )}
             </button>
             <button
               type="button"
@@ -228,7 +242,14 @@ export default function BuyerDashboardClient({
         </div>
 
         <div className="p-4 sm:p-5 bg-white rounded-b-xl overflow-visible">
-          {declinedRequest && <DeclinedNotice request={declinedRequest} />}
+          {outcomeRequest && needsBuyerOutcomeAck(outcomeRequest) && (
+            <OutcomeNotice
+              title={buyerOutcomeTitle(outcomeRequest)}
+              reason={outcomeRequest.decline_reason}
+              confirming={acking}
+              onConfirm={acknowledgeOutcome}
+            />
+          )}
 
           {statusNotice && (
             <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-border bg-neutral-50 px-3 py-2.5">
@@ -246,9 +267,9 @@ export default function BuyerDashboardClient({
 
           {activeTab === "current" && (
             <div className="space-y-4 sm:space-y-6">
-              {declinedRequest && !request ? (
+              {outcomeRequest && needsBuyerOutcomeAck(outcomeRequest) && !request ? (
                 <p className="text-sm text-neutral-500">
-                  Open Update Build to submit a new request.
+                  Confirm above, then open Update Build to submit a new request.
                 </p>
               ) : (
                 <>

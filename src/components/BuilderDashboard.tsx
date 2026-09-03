@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { BUILD_STATUSES, isArchivedStatus } from "@/lib/types";
+import { BUILD_STATUSES, isArchivedStatus, needsAdminOutcomeAck, staysOnAdminDashboard } from "@/lib/types";
 import type { BuildRequest, Profile } from "@/lib/types";
 import ChatBox from "./ChatBox";
 import BuildQuoteEditor, { type BuildQuoteEditorHandle } from "./BuildQuoteEditor";
 import OwnedPartsSummary from "./OwnedPartsSummary";
+import OutcomeNotice, { CloseReasonForm } from "./OutcomeNotice";
 
 interface ClientWithProfile extends BuildRequest {
   profiles: Profile;
@@ -25,7 +26,9 @@ export default function BuilderDashboard({
   builderId,
   builderName,
 }: BuilderDashboardProps) {
-  const [clients, setClients] = useState(initialClients);
+  const [clients, setClients] = useState(() =>
+    initialClients.filter((client) => staysOnAdminDashboard(client))
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DetailTab>("drafts");
   const [updating, setUpdating] = useState(false);
@@ -34,7 +37,8 @@ export default function BuilderDashboard({
   const [draftStatus, setDraftStatus] = useState<BuildRequest["status"]>("pending");
   const [draftEstimate, setDraftEstimate] = useState("");
   const [showDeclineForm, setShowDeclineForm] = useState(false);
-  const [declineReason, setDeclineReason] = useState("");
+  const [showCancelForm, setShowCancelForm] = useState(false);
+  const [closeReason, setCloseReason] = useState("");
   const quoteEditorRef = useRef<BuildQuoteEditorHandle>(null);
   const supabase = useMemo(() => createClient(), []);
 
@@ -59,14 +63,16 @@ export default function BuilderDashboard({
     setSaveOk(false);
     setActionError("");
     setShowDeclineForm(false);
-    setDeclineReason("");
+    setShowCancelForm(false);
+    setCloseReason("");
   }
 
   function closeClient() {
     setSelectedId(null);
     setActiveTab("drafts");
     setShowDeclineForm(false);
-    setDeclineReason("");
+    setShowCancelForm(false);
+    setCloseReason("");
   }
 
   function formatStatusError(message: string): string {
@@ -82,11 +88,10 @@ export default function BuilderDashboard({
 
     if (
       lower.includes("decline_reason") ||
-      lower.includes("schema cache")
+      lower.includes("closed_by") ||
+      lower.includes("outcome_acknowledged")
     ) {
-      if (lower.includes("decline_reason")) {
-        return "Decline reasons aren't set up yet. Run decline-reason.sql in the Supabase SQL Editor, then try again.";
-      }
+      return "Run outcome-ack.sql in the Supabase SQL Editor, then try again.";
     }
 
     if (
@@ -171,7 +176,7 @@ export default function BuilderDashboard({
   }
 
   async function declineOrder(requestId: string) {
-    const reason = declineReason.trim();
+    const reason = closeReason.trim();
     if (!reason) {
       setActionError("Write a reason before declining this request.");
       return;
@@ -179,19 +184,62 @@ export default function BuilderDashboard({
 
     const ok = await updateStatus(requestId, "rejected", {
       onlyFromStatus: "pending",
-      extra: { decline_reason: reason },
+      extra: {
+        decline_reason: reason,
+        closed_by: "builder",
+        outcome_acknowledged: false,
+      },
     });
     if (ok) {
       setShowDeclineForm(false);
-      setDeclineReason("");
+      setCloseReason("");
     }
   }
 
   async function cancelOrder(requestId: string) {
-    if (!confirm("Cancel this order? It will be removed from your dashboard.")) {
+    const reason = closeReason.trim();
+    if (!reason) {
+      setActionError("Write a reason before cancelling this request.");
       return;
     }
-    await updateStatus(requestId, "cancelled");
+
+    const ok = await updateStatus(requestId, "cancelled", {
+      extra: {
+        decline_reason: reason,
+        closed_by: "builder",
+        outcome_acknowledged: false,
+      },
+    });
+    if (ok) {
+      setShowCancelForm(false);
+      setCloseReason("");
+    }
+  }
+
+  async function acknowledgeOutcome(requestId: string) {
+    setUpdating(true);
+    setActionError("");
+
+    const { data, error } = await supabase
+      .from("build_requests")
+      .update({
+        outcome_acknowledged: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", requestId)
+      .select("*")
+      .maybeSingle();
+
+    if (error) {
+      setActionError(formatStatusError(error.message));
+      setUpdating(false);
+      return;
+    }
+
+    if (data) {
+      removeClient(requestId);
+    }
+    setUpdating(false);
   }
 
   async function markReviewed(requestId: string) {
@@ -314,11 +362,15 @@ export default function BuilderDashboard({
     setUpdating(false);
   }
 
-  const pendingCount = clients.filter((c) => c.status === "pending").length;
-  const activeCount = clients.filter((c) => c.status === "in_progress").length;
-  const issueCount = clients.filter((c) => c.status === "not_received").length;
-  const alertCount = clients.filter((c) => c.needs_review).length;
+  const workingClients = clients.filter((c) => !isArchivedStatus(c.status));
+  const pendingCount = workingClients.filter((c) => c.status === "pending").length;
+  const activeCount = workingClients.filter((c) => c.status === "in_progress").length;
+  const issueCount = workingClients.filter((c) => c.status === "not_received").length;
+  const alertCount = workingClients.filter((c) => c.needs_review).length;
   const sortedClients = [...clients].sort((a, b) => {
+    const aAck = needsAdminOutcomeAck(a);
+    const bAck = needsAdminOutcomeAck(b);
+    if (aAck !== bAck) return aAck ? -1 : 1;
     if (!!a.needs_review !== !!b.needs_review) {
       return a.needs_review ? -1 : 1;
     }
@@ -374,8 +426,30 @@ export default function BuilderDashboard({
           schema: "public",
           table: "build_requests",
         },
-        (payload) => {
-          const updated = payload.new as BuildRequest;
+        async (payload) => {
+          const incoming = payload.new as BuildRequest;
+          if (!incoming?.id) return;
+
+          const { data } = await supabase
+            .from("build_requests")
+            .select("*")
+            .eq("id", incoming.id)
+            .maybeSingle();
+
+          const updated = (data as BuildRequest | null) ?? incoming;
+
+          if (needsAdminOutcomeAck(updated)) {
+            setClients((prev) => {
+              const exists = prev.some((c) => c.id === updated.id);
+              if (exists) {
+                return prev.map((c) =>
+                  c.id === updated.id ? { ...c, ...updated } : c
+                );
+              }
+              return prev;
+            });
+            return;
+          }
 
           if (isArchivedStatus(updated.status)) {
             setClients((prev) => prev.filter((c) => c.id !== updated.id));
@@ -405,7 +479,7 @@ export default function BuilderDashboard({
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
         <div className="bg-surface-card border border-border rounded-xl p-3 sm:p-4 text-center">
-          <p className="text-xl sm:text-2xl font-bold text-neutral-900">{clients.length}</p>
+          <p className="text-xl sm:text-2xl font-bold text-neutral-900">{workingClients.length}</p>
           <p className="text-xs text-neutral-500 mt-1">Active Orders</p>
         </div>
         <div className="bg-surface-card border border-border rounded-xl p-3 sm:p-4 text-center">
@@ -444,6 +518,7 @@ export default function BuilderDashboard({
                     : client.needs_review
                       ? "New request"
                       : null;
+                const awaitingAck = needsAdminOutcomeAck(client);
                 return (
                   <button
                     key={client.id}
@@ -451,6 +526,8 @@ export default function BuilderDashboard({
                     className={`w-full text-left p-4 rounded-xl border transition-all ${
                       isSelected
                         ? "border-neutral-900 bg-neutral-50"
+                        : awaitingAck
+                          ? "border-red-300 bg-red-50 hover:border-red-400"
                         : client.needs_review
                           ? "border-amber-400 bg-amber-50 hover:border-amber-500"
                           : client.status === "pending"
@@ -473,13 +550,21 @@ export default function BuilderDashboard({
                     <p className="text-xs text-neutral-500">
                       {client.use_case} · ${client.budget?.toLocaleString()}
                     </p>
-                    {alertLabel && (
+                    {awaitingAck ? (
+                      <p className="text-xs text-red-800 mt-2 font-semibold">
+                        Customer cancelled — confirm
+                      </p>
+                    ) : alertLabel ? (
                       <p className="text-xs text-amber-800 mt-2 font-semibold">
                         ● {alertLabel}
                       </p>
-                    )}
+                    ) : null}
                     <p className="text-xs text-neutral-700 mt-2 font-medium">
-                      {client.status === "pending" ? "Review & chat →" : "View build →"}
+                      {awaitingAck
+                        ? "View reason →"
+                        : client.status === "pending"
+                          ? "Review & chat →"
+                          : "View build →"}
                     </p>
                   </button>
                 );
@@ -536,15 +621,21 @@ export default function BuilderDashboard({
                       }`}
                     >
                       Chat
-                      {(selected.status === "pending" || selected.needs_review) && (
-                        <span className="ml-1.5 text-amber-600">●</span>
-                      )}
                     </button>
                   </div>
                 </div>
 
                 <div className="p-4 sm:p-5 bg-white">
-                  {selected.needs_review && (
+                  {needsAdminOutcomeAck(selected) && (
+                    <OutcomeNotice
+                      title="The customer cancelled this request"
+                      reason={selected.decline_reason}
+                      confirming={updating}
+                      onConfirm={() => acknowledgeOutcome(selected.id)}
+                    />
+                  )}
+
+                  {selected.needs_review && !needsAdminOutcomeAck(selected) && (
                     <div className="mb-4 bg-amber-50 border border-amber-300 rounded-lg p-4 space-y-3">
                       <p className="text-sm font-semibold text-amber-950">
                         {selected.review_kind === "updated"
@@ -568,6 +659,12 @@ export default function BuilderDashboard({
                   )}
 
                   <div className={activeTab === "drafts" ? "" : "hidden"}>
+                      {needsAdminOutcomeAck(selected) ? (
+                        <p className="text-sm text-neutral-500">
+                          Confirm the cancellation above to remove this order from your dashboard.
+                        </p>
+                      ) : (
+                      <>
                       {selected.status === "not_received" && (
                         <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
                           <p className="text-sm font-medium text-red-800">
@@ -665,15 +762,41 @@ export default function BuilderDashboard({
                         </p>
                       )}
 
-                      {selected.status !== "pending" && (
-                        <button
-                          type="button"
-                          onClick={() => cancelOrder(selected.id)}
-                          disabled={updating}
-                          className="mt-4 w-full py-2.5 border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
-                        >
-                          Cancel Order
-                        </button>
+                      {selected.status !== "pending" &&
+                        !needsAdminOutcomeAck(selected) &&
+                        (showCancelForm ? (
+                          <div className="mt-4">
+                            <CloseReasonForm
+                              label="Why are you cancelling this request?"
+                              placeholder="This reason will be shown to the customer."
+                              confirmLabel="Confirm cancel"
+                              confirming={updating}
+                              value={closeReason}
+                              error={actionError}
+                              onChange={setCloseReason}
+                              onConfirm={() => cancelOrder(selected.id)}
+                              onCancel={() => {
+                                setShowCancelForm(false);
+                                setCloseReason("");
+                                setActionError("");
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowCancelForm(true);
+                              setShowDeclineForm(false);
+                              setActionError("");
+                            }}
+                            disabled={updating}
+                            className="mt-4 w-full py-2.5 border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
+                          >
+                            Cancel Order
+                          </button>
+                        ))}
+                      </>
                       )}
                     </div>
 
@@ -708,50 +831,25 @@ export default function BuilderDashboard({
                             <strong>Review this order.</strong> Chat with the customer first,
                             then accept or decline.
                           </p>
-                          {actionError && (
+                          {actionError && !showDeclineForm && (
                             <p className="text-sm text-red-700">{actionError}</p>
                           )}
                           {showDeclineForm ? (
-                            <div className="space-y-3">
-                              <label className="block">
-                                <span className="text-sm font-medium text-neutral-900">
-                                  Why are you declining this request?
-                                </span>
-                                <textarea
-                                  value={declineReason}
-                                  onChange={(e) => setDeclineReason(e.target.value)}
-                                  rows={4}
-                                  maxLength={1000}
-                                  placeholder="This reason will be shown to the customer."
-                                  className="mt-1.5 w-full bg-white border border-border rounded-lg px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:border-neutral-400"
-                                />
-                              </label>
-                              <p className="text-xs text-neutral-500">
-                                {declineReason.trim().length}/1000
-                              </p>
-                              <div className="flex flex-col sm:flex-row gap-3">
-                                <button
-                                  type="button"
-                                  onClick={() => declineOrder(selected.id)}
-                                  disabled={updating || !declineReason.trim()}
-                                  className="flex-1 py-2.5 bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white font-medium rounded-lg text-sm transition-colors"
-                                >
-                                  {updating ? "Declining…" : "Confirm decline"}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setShowDeclineForm(false);
-                                    setDeclineReason("");
-                                    setActionError("");
-                                  }}
-                                  disabled={updating}
-                                  className="flex-1 py-2.5 border border-border text-neutral-700 hover:bg-white disabled:opacity-50 font-medium rounded-lg text-sm transition-colors"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            </div>
+                            <CloseReasonForm
+                              label="Why are you declining this request?"
+                              placeholder="This reason will be shown to the customer."
+                              confirmLabel="Confirm decline"
+                              confirming={updating}
+                              value={closeReason}
+                              error={actionError}
+                              onChange={setCloseReason}
+                              onConfirm={() => declineOrder(selected.id)}
+                              onCancel={() => {
+                                setShowDeclineForm(false);
+                                setCloseReason("");
+                                setActionError("");
+                              }}
+                            />
                           ) : (
                             <div className="flex flex-col sm:flex-row gap-3">
                               <button
@@ -766,6 +864,7 @@ export default function BuilderDashboard({
                                 type="button"
                                 onClick={() => {
                                   setShowDeclineForm(true);
+                                  setShowCancelForm(false);
                                   setActionError("");
                                 }}
                                 disabled={updating}

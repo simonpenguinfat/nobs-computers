@@ -124,6 +124,10 @@ create table if not exists public.build_requests (
 
   decline_reason text,
 
+  closed_by text,
+
+  outcome_acknowledged boolean not null default false,
+
   created_at timestamptz not null default now(),
 
   updated_at timestamptz not null default now()

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { BuildRequest } from "@/lib/types";
+import { CloseReasonForm } from "@/components/OutcomeNotice";
 
 interface BuyerOrderActionsProps {
   request: BuildRequest;
@@ -15,13 +16,17 @@ export default function BuyerOrderActions({
 }: BuyerOrderActionsProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showCancelForm, setShowCancelForm] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
   const supabase = useMemo(() => createClient(), []);
 
   const canCancel =
     request.status === "pending" || request.status === "in_progress";
 
   async function handleCancel() {
-    if (!confirm("Cancel this build request? This cannot be undone.")) {
+    const reason = cancelReason.trim();
+    if (!reason) {
+      setError("Write a reason before cancelling this request.");
       return;
     }
 
@@ -32,6 +37,9 @@ export default function BuyerOrderActions({
       .from("build_requests")
       .update({
         status: "cancelled",
+        decline_reason: reason,
+        closed_by: "buyer",
+        outcome_acknowledged: false,
         updated_at: new Date().toISOString(),
       })
       .eq("id", request.id)
@@ -47,13 +55,13 @@ export default function BuyerOrderActions({
 
     if (!data || data.status !== "cancelled") {
       setError(
-        "Could not cancel your order. Run fix-decline-order.sql in Supabase, then try again."
+        "Could not cancel your order. Run outcome-ack.sql in Supabase, then try again."
       );
       setLoading(false);
       return;
     }
 
-    onUpdated(null);
+    onUpdated(data as BuildRequest);
     setLoading(false);
   }
 
@@ -69,18 +77,38 @@ export default function BuyerOrderActions({
         </div>
       )}
 
-      {canCancel && (
-        <button
-          type="button"
-          onClick={handleCancel}
-          disabled={loading}
-          className="w-full py-2.5 border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
-        >
-          {loading ? "Cancelling..." : "Cancel Request"}
-        </button>
-      )}
+      {canCancel &&
+        (showCancelForm ? (
+          <CloseReasonForm
+            label="Why are you cancelling this request?"
+            placeholder="This reason will be shown to your builder."
+            confirmLabel="Confirm cancel"
+            confirming={loading}
+            value={cancelReason}
+            error={error}
+            onChange={setCancelReason}
+            onConfirm={handleCancel}
+            onCancel={() => {
+              setShowCancelForm(false);
+              setCancelReason("");
+              setError("");
+            }}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setShowCancelForm(true);
+              setError("");
+            }}
+            disabled={loading}
+            className="w-full py-2.5 border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
+          >
+            Cancel Request
+          </button>
+        ))}
 
-      {error && <p className="text-red-600 text-sm">{error}</p>}
+      {error && !showCancelForm && <p className="text-red-600 text-sm">{error}</p>}
     </div>
   );
 }

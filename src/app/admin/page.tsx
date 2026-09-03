@@ -29,7 +29,7 @@ export default async function AdminPage() {
   const { data: clients } = await supabase
     .from("build_requests")
     .select("*, profiles!buyer_id(*)")
-    .in("status", [...ACTIVE_STATUSES])
+    .in("status", [...ACTIVE_STATUSES, "cancelled"])
     .order("created_at", { ascending: false });
 
   return (
