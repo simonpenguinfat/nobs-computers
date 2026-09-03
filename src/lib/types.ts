@@ -21,6 +21,39 @@ export interface BuildRequest {
   updated_at: string;
 }
 
+export const PART_CATEGORIES = [
+  "CPU",
+  "GPU",
+  "RAM",
+  "SSD",
+  "PSU",
+  "Motherboard",
+  "Case",
+  "Fans",
+  "CPU Cooling",
+  "Other",
+] as const;
+
+export type PartCategory = (typeof PART_CATEGORIES)[number];
+
+export interface BuildQuotePart {
+  id: string;
+  category: string;
+  name: string;
+  price: number | null;
+  url: string;
+}
+
+export interface BuildQuote {
+  id: string;
+  build_request_id: string;
+  title: string;
+  notes: string;
+  parts: BuildQuotePart[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Message {
   id: string;
   build_request_id: string;

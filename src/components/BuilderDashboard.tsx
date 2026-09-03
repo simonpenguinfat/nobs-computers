@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { BUILD_STATUSES, isArchivedStatus } from "@/lib/types";
 import type { BuildRequest, Profile } from "@/lib/types";
 import ChatBox from "./ChatBox";
+import BuildQuoteEditor from "./BuildQuoteEditor";
 
 interface ClientWithProfile extends BuildRequest {
   profiles: Profile;
@@ -420,6 +421,7 @@ export default function BuilderDashboard({
                               Estimated Cost (CAD)
                             </label>
                             <input
+                              key={String(selected.estimated_cost ?? "empty")}
                               type="number"
                               defaultValue={selected.estimated_cost ?? ""}
                               onBlur={(e) => {
@@ -432,6 +434,12 @@ export default function BuilderDashboard({
                           </div>
                         </div>
                       )}
+
+                      <BuildQuoteEditor
+                        key={selected.id}
+                        buildRequestId={selected.id}
+                        onUseAsEstimate={(total) => updateEstimate(selected.id, total)}
+                      />
 
                       {selected.status !== "pending" && (
                         <button

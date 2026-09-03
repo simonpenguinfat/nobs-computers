@@ -8,6 +8,7 @@ import BuildStatusCard from "./BuildStatusCard";
 import BuyerSettings from "./BuyerSettings";
 import ChatBox from "./ChatBox";
 import PendingDraftSubmit from "./PendingDraftSubmit";
+import BuyerBuildQuotes from "./BuyerBuildQuotes";
 
 interface BuyerDashboardProps {
   userId: string;
@@ -110,6 +111,8 @@ export default function BuyerDashboardClient({
 
         <div className={`space-y-4 sm:space-y-6 ${mobileTab !== "status" ? "hidden lg:block" : ""}`}>
           <BuildStatusCard request={request} onRequestUpdated={handleRequestUpdated} />
+
+          {request && <BuyerBuildQuotes buildRequestId={request.id} />}
 
           {request ? (
             <ChatBox
